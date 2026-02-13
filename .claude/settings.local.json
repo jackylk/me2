@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(chmod:*)",
+      "Bash(pip install:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(test:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
