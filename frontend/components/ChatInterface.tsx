@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Heart } from 'lucide-react';
 import { apiClient, ChatMessage } from '@/lib/api-client';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatInterfaceProps {
   userId: string;
@@ -130,16 +132,24 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-800'
+                  : 'bg-secondary text-foreground'
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'user' ? (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              )}
               {message.timestamp && (
                 <p
                   className={`text-xs mt-1 ${
                     message.role === 'user'
                       ? 'text-blue-100'
-                      : 'text-gray-500'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
