@@ -123,22 +123,22 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+      <div className="flex items-center justify-between px-8 py-4 border-b border-border/30 bg-gradient-to-b from-background to-background/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-medium text-foreground">对话</h1>
+          <h1 className="text-lg font-semibold text-foreground/90">对话</h1>
           {sessionId && (
-            <span className="text-sm text-muted-foreground">
-              会话ID: {sessionId.slice(0, 8)}...
+            <span className="text-xs text-muted-foreground/70 font-mono bg-secondary/30 px-2 py-1 rounded">
+              {sessionId.slice(0, 8)}
             </span>
           )}
         </div>
         <button
           onClick={() => setDebugMode(!debugMode)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
             debugMode
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30'
               : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
           }`}
         >
@@ -148,57 +148,60 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8">
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground mt-10">
-            <p className="text-lg">开始和 Me2 聊天吧！</p>
-            <p className="text-sm mt-2">我会记住你说的每一句话</p>
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-6">
+              <Bot className="w-10 h-10 text-muted-foreground/50" />
+            </div>
+            <p className="text-xl font-medium text-foreground/80 mb-2">开始和 Me2 聊天吧！</p>
+            <p className="text-sm text-muted-foreground/60">我会记住你说的每一句话</p>
           </div>
         )}
 
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex gap-3 ${
+            className={`flex gap-4 ${
               message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            } animate-in fade-in slide-in-from-bottom-2 duration-500`}
           >
             {message.role === 'assistant' && (
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-md bg-[#2f3136] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-gray-400" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3a3d42] to-[#2a2d32] flex items-center justify-center shadow-lg">
+                  <Bot className="w-5 h-5 text-blue-400/80" />
                 </div>
               </div>
             )}
             <div
               className={`flex flex-col ${
                 message.role === 'user' ? 'items-end' : 'items-start'
-              } max-w-[65%]`}
+              } max-w-[70%]`}
             >
               <div
-                className={`rounded-3xl px-5 py-3.5 ${
+                className={`rounded-3xl px-6 py-4 backdrop-blur-sm ${
                   message.role === 'user'
-                    ? 'bg-[#5B7FEB] text-white'
-                    : 'bg-[#2f3136] text-[#dcddde]'
+                    ? 'bg-gradient-to-br from-[#5B7FEB] to-[#4E6FDB] text-white shadow-xl shadow-blue-500/20'
+                    : 'bg-gradient-to-br from-[#2f3136] to-[#292b30] text-[#dcddde] shadow-xl shadow-black/10 border border-white/5'
                 }`}
               >
                 {message.role === 'user' ? (
-                  <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.content}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed text-[15px] font-normal">{message.content}</p>
                 ) : (
                   <>
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-p:leading-relaxed prose-p:text-[15px] [&>*]:text-[#dcddde]">
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-p:text-[15px] [&>*]:text-[#dcddde] prose-headings:text-[#e8e9ea] prose-strong:text-[#e8e9ea] prose-code:text-blue-300 prose-code:bg-black/20 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.content}
                       </ReactMarkdown>
                     </div>
-                    {message.debug_info && (
+                    {debugMode && message.debug_info && (
                       <DebugPanel debugInfo={message.debug_info} />
                     )}
                   </>
                 )}
               </div>
               {message.timestamp && (
-                <p className="text-[11px] text-muted-foreground/60 mt-1.5 px-2">
+                <p className="text-[11px] text-muted-foreground/50 mt-2 px-2 font-mono">
                   {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -210,14 +213,14 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
         ))}
 
         {isLoading && (
-          <div className="flex justify-start gap-3">
+          <div className="flex justify-start gap-4 animate-in fade-in duration-300">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-md bg-[#2f3136] flex items-center justify-center">
-                <Bot className="w-5 h-5 text-gray-400" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3a3d42] to-[#2a2d32] flex items-center justify-center shadow-lg">
+                <Bot className="w-5 h-5 text-blue-400/80" />
               </div>
             </div>
-            <div className="bg-[#2f3136] rounded-3xl px-5 py-3.5">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <div className="bg-gradient-to-br from-[#2f3136] to-[#292b30] rounded-3xl px-6 py-4 shadow-xl shadow-black/10 border border-white/5">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400/60" />
             </div>
           </div>
         )}
@@ -226,21 +229,21 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border/50 px-6 py-4 bg-background">
+      <div className="border-t border-border/20 px-8 py-6 bg-gradient-to-t from-background via-background to-background/50 backdrop-blur-sm">
         <div className="flex gap-3 max-w-4xl mx-auto">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="输入消息..."
-            className="flex-1 resize-none bg-[#2f3136] text-[#dcddde] rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#5B7FEB]/50 placeholder:text-gray-500 text-[15px] min-h-[52px]"
+            className="flex-1 resize-none bg-gradient-to-br from-[#2f3136] to-[#292b30] text-[#dcddde] rounded-3xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-[#5B7FEB]/40 focus:shadow-lg focus:shadow-blue-500/10 placeholder:text-gray-500/60 text-[15px] min-h-[56px] border border-white/5 transition-all"
             rows={1}
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="bg-[#5B7FEB] text-white rounded-2xl px-6 py-3 hover:bg-[#4E6ED9] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            className="bg-gradient-to-br from-[#5B7FEB] to-[#4E6FDB] text-white rounded-3xl px-7 py-4 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100 transition-all duration-200 flex items-center justify-center"
           >
             <Send className="w-5 h-5" />
           </button>
