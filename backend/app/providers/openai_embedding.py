@@ -34,8 +34,27 @@ class OpenAIEmbedding(EmbeddingProvider):
         self._dims = dimensions
         logger.info(f"使用远程 Embedding: {model} (维度: {dimensions})")
 
-    async def embed(self, texts: List[str]) -> List[List[float]]:
-        """生成 embedding（NeuroMemory 接口）
+    async def embed(self, text: str) -> List[float]:
+        """生成单个文本的 embedding（NeuroMemory 接口）
+
+        Args:
+            text: 单个文本
+
+        Returns:
+            embedding 向量
+        """
+        try:
+            response = await self.client.embeddings.create(
+                input=[text],
+                model=self.model
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            logger.error(f"生成 embedding 失败: {e}")
+            raise
+
+    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """批量生成 embedding（NeuroMemory 接口）
 
         Args:
             texts: 文本列表
@@ -50,7 +69,7 @@ class OpenAIEmbedding(EmbeddingProvider):
             )
             return [item.embedding for item in response.data]
         except Exception as e:
-            logger.error(f"生成 embedding 失败: {e}")
+            logger.error(f"批量生成 embedding 失败: {e}")
             raise
 
     def dims(self) -> int:
