@@ -125,30 +125,34 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-border/30 bg-gradient-to-b from-background to-background/50 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-6 py-3.5 border-b border-border/30 bg-gradient-to-b from-background to-background/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-foreground/90">对话</h1>
+          <h1 className="text-base font-semibold text-foreground/90">对话</h1>
           {sessionId && (
-            <span className="text-xs text-muted-foreground/70 font-mono bg-secondary/30 px-2 py-1 rounded">
+            <span className="text-xs text-muted-foreground/70 font-mono bg-secondary/30 px-2 py-0.5 rounded">
               {sessionId.slice(0, 8)}
             </span>
           )}
         </div>
         <button
           onClick={() => setDebugMode(!debugMode)}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
             debugMode
               ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30'
               : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
           }`}
         >
           <Bug className="w-4 h-4" />
-          调试模式
+          调试
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8">
+      {/* Main content - 左右布局 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Chat Area */}
+        <div className={`flex flex-col transition-all duration-300 ${debugMode ? 'w-2/3' : 'w-full'}`}>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-6">
@@ -188,16 +192,11 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
                 {message.role === 'user' ? (
                   <p className="whitespace-pre-wrap leading-relaxed text-[15px] font-normal">{message.content}</p>
                 ) : (
-                  <>
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-p:text-[15px] [&>*]:text-[#dcddde] prose-headings:text-[#e8e9ea] prose-strong:text-[#e8e9ea] prose-code:text-blue-300 prose-code:bg-black/20 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                    {debugMode && message.debug_info && (
-                      <DebugPanel debugInfo={message.debug_info} />
-                    )}
-                  </>
+                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-p:text-[15px] [&>*]:text-[#dcddde] prose-headings:text-[#e8e9ea] prose-strong:text-[#e8e9ea] prose-code:text-blue-300 prose-code:bg-black/20 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
                 )}
               </div>
               {message.timestamp && (
@@ -225,11 +224,11 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
-      </div>
+            <div ref={messagesEndRef} />
+          </div>
 
-      {/* Input */}
-      <div className="border-t border-border/20 px-8 py-6 bg-gradient-to-t from-background via-background to-background/50 backdrop-blur-sm">
+          {/* Input */}
+          <div className="border-t border-border/20 px-6 py-4 bg-gradient-to-t from-background via-background to-background/50 backdrop-blur-sm">
         <div className="flex gap-3 max-w-4xl mx-auto">
           <textarea
             value={input}
@@ -247,7 +246,49 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
           >
             <Send className="w-5 h-5" />
           </button>
+            </div>
+          </div>
         </div>
+
+        {/* Right: Debug Panel */}
+        {debugMode && (
+          <div className="w-1/3 border-l border-border/30 bg-gradient-to-b from-background/50 to-background flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+            {/* Debug Header */}
+            <div className="px-4 py-3 border-b border-border/30 bg-gradient-to-r from-orange-500/10 to-amber-500/10">
+              <div className="flex items-center gap-2 text-orange-400">
+                <Bug className="w-4 h-4" />
+                <span className="font-semibold text-sm">调试面板</span>
+              </div>
+            </div>
+
+            {/* Debug Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {messages
+                .filter((msg) => msg.role === 'assistant' && msg.debug_info)
+                .map((msg, idx) => (
+                  <div key={idx} className="bg-black/20 border border-white/5 rounded-xl p-3">
+                    <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
+                      <span className="font-mono">#{messages.indexOf(msg) + 1}</span>
+                      <span>·</span>
+                      <span>
+                        {new Date(msg.timestamp!).toLocaleTimeString('zh-CN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    {msg.debug_info && <DebugPanel debugInfo={msg.debug_info} />}
+                  </div>
+                ))}
+              {messages.filter((msg) => msg.role === 'assistant' && msg.debug_info).length === 0 && (
+                <div className="text-center text-muted-foreground/50 mt-12">
+                  <Bug className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">开始对话后将显示调试信息</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
