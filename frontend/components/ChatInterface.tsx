@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Heart, Bug } from 'lucide-react';
+import { Send, Loader2, Bot, Bug } from 'lucide-react';
 import { apiClient, ChatMessage } from '@/lib/api-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -123,24 +123,32 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto">
-      {/* Debug Toggle */}
-      <div className="flex justify-end p-2 border-b border-border bg-card">
+    <div className="flex flex-col h-full max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-medium text-foreground">对话</h1>
+          {sessionId && (
+            <span className="text-sm text-muted-foreground">
+              会话ID: {sessionId.slice(0, 8)}...
+            </span>
+          )}
+        </div>
         <button
           onClick={() => setDebugMode(!debugMode)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
             debugMode
               ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
           }`}
         >
           <Bug className="w-4 h-4" />
-          {debugMode ? '调试已开启' : '开启调试'}
+          调试模式
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground mt-10">
             <p className="text-lg">开始和 Me2 聊天吧！</p>
@@ -151,46 +159,46 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex ${
+            className={`flex gap-3 ${
               message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             {message.role === 'assistant' && (
-              <div className="flex-shrink-0 mr-2">
-                <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-pink-500" />
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 rounded-md bg-[#2f3136] flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-gray-400" />
                 </div>
               </div>
             )}
             <div
-              className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-secondary text-foreground'
-              }`}
+              className={`flex flex-col ${
+                message.role === 'user' ? 'items-end' : 'items-start'
+              } max-w-[65%]`}
             >
-              {message.role === 'user' ? (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              ) : (
-                <>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                  {message.debug_info && (
-                    <DebugPanel debugInfo={message.debug_info} />
-                  )}
-                </>
-              )}
+              <div
+                className={`rounded-3xl px-5 py-3.5 ${
+                  message.role === 'user'
+                    ? 'bg-[#5B7FEB] text-white'
+                    : 'bg-[#2f3136] text-[#dcddde]'
+                }`}
+              >
+                {message.role === 'user' ? (
+                  <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.content}</p>
+                ) : (
+                  <>
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-p:leading-relaxed prose-p:text-[15px] [&>*]:text-[#dcddde]">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                    {message.debug_info && (
+                      <DebugPanel debugInfo={message.debug_info} />
+                    )}
+                  </>
+                )}
+              </div>
               {message.timestamp && (
-                <p
-                  className={`text-xs mt-1 ${
-                    message.role === 'user'
-                      ? 'text-blue-100'
-                      : 'text-muted-foreground'
-                  }`}
-                >
+                <p className="text-[11px] text-muted-foreground/60 mt-1.5 px-2">
                   {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -202,14 +210,14 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
         ))}
 
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="flex-shrink-0 mr-2">
-              <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                <Heart className="w-5 h-5 text-pink-500" />
+          <div className="flex justify-start gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 rounded-md bg-[#2f3136] flex items-center justify-center">
+                <Bot className="w-5 h-5 text-gray-400" />
               </div>
             </div>
-            <div className="bg-secondary rounded-lg px-4 py-2">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <div className="bg-[#2f3136] rounded-3xl px-5 py-3.5">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
             </div>
           </div>
         )}
@@ -218,21 +226,21 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border p-4 bg-card">
-        <div className="flex gap-2">
+      <div className="border-t border-border/50 px-6 py-4 bg-background">
+        <div className="flex gap-3 max-w-4xl mx-auto">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="输入消息..."
-            className="flex-1 resize-none border border-input bg-background text-foreground rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+            className="flex-1 resize-none bg-[#2f3136] text-[#dcddde] rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#5B7FEB]/50 placeholder:text-gray-500 text-[15px] min-h-[52px]"
             rows={1}
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="bg-primary text-primary-foreground rounded-lg px-6 py-2 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
+            className="bg-[#5B7FEB] text-white rounded-2xl px-6 py-3 hover:bg-[#4E6ED9] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
             <Send className="w-5 h-5" />
           </button>
