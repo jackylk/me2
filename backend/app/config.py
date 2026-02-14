@@ -31,11 +31,14 @@ class Settings(BaseSettings):
 
     # OpenAI API (用于 Embedding，可选)
     OPENAI_API_KEY: str = ""  # 如果不配置，会使用 DEEPSEEK_API_KEY
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"  # 可改为 SiliconFlow 等兼容服务
 
     # Embedding - 本地模型
     EMBEDDING_MODEL: str = "BAAI/bge-small-zh-v1.5"  # 中文优化，512 维
+    EMBEDDING_DIMENSIONS: int = 512  # embedding 维度，需与模型匹配
     # 其他可选模型：
     # - BAAI/bge-base-zh-v1.5 (768 维，更准确但更慢)
+    # - BAAI/bge-large-zh-v1.5 (1024 维，SiliconFlow)
     # - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 (384 维，多语言)
 
     # NeuroMemory 配置

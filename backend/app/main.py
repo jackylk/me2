@@ -57,14 +57,20 @@ async def lifespan(app: FastAPI):
 
         if embedding_provider is None:
             logger.info("🌐 使用远程 Embedding API (OpenAI 兼容)")
-            # 使用 OpenAI 的 embedding API
-            # 如果需要，可以在 .env 中添加 OPENAI_API_KEY
-            api_key = getattr(settings, 'OPENAI_API_KEY', settings.DEEPSEEK_API_KEY)
+            # 使用 OpenAI 兼容的 embedding API (OpenAI/SiliconFlow 等)
+            api_key = settings.OPENAI_API_KEY or settings.DEEPSEEK_API_KEY
+            base_url = settings.OPENAI_BASE_URL
+            model = settings.EMBEDDING_MODEL
+            dimensions = settings.EMBEDDING_DIMENSIONS
+
+            logger.info(f"🔑 Embedding API: {base_url}")
+            logger.info(f"📦 Embedding Model: {model} ({dimensions}D)")
+
             embedding_provider = OpenAIEmbedding(
                 api_key=api_key,
-                base_url="https://api.openai.com/v1",  # OpenAI API
-                model="text-embedding-3-small",
-                dimensions=1536
+                base_url=base_url,
+                model=model,
+                dimensions=dimensions
             )
 
         nm = NeuroMemory(
