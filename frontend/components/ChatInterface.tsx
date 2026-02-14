@@ -172,7 +172,12 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
           </div>
         )}
 
-        {messages.map((message, index) => (
+        {messages.map((message, index) => {
+          // 隐藏正在加载中的空助手消息（由loading指示器代替）
+          if (message.role === 'assistant' && !message.content && isLoading && index === messages.length - 1) {
+            return null;
+          }
+          return (
           <div
             key={index}
             className={`flex gap-4 ${
@@ -218,9 +223,10 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
-        {isLoading && (
+        {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content && (
           <div className="flex justify-start gap-4 animate-in fade-in duration-300">
             <div className="flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3a3d42] to-[#2a2d32] flex items-center justify-center shadow-lg">

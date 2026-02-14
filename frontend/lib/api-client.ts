@@ -102,7 +102,7 @@ class ApiClient {
     sessionId?: string,
     debugMode: boolean = false
   ): AsyncGenerator<StreamChunk> {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('me2_access_token');
     if (!token) {
       throw new Error('未登录');
     }
