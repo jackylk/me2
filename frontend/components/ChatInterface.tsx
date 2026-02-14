@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Heart } from 'lucide-react';
 import { apiClient, ChatMessage } from '@/lib/api-client';
 
 interface ChatInterfaceProps {
@@ -83,6 +83,13 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
               message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
+            {message.role === 'assistant' && (
+              <div className="flex-shrink-0 mr-2">
+                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-pink-500" />
+                </div>
+              </div>
+            )}
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 message.role === 'user'
@@ -111,6 +118,11 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
 
         {isLoading && (
           <div className="flex justify-start">
+            <div className="flex-shrink-0 mr-2">
+              <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-pink-500" />
+              </div>
+            </div>
             <div className="bg-gray-200 rounded-lg px-4 py-2">
               <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
             </div>

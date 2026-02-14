@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Bell, Calendar, Heart, MessageCircle, CheckCircle } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProactiveHistory {
   contact_id: string;
@@ -18,18 +19,15 @@ interface ProactiveHistory {
 }
 
 export default function ProactivePage() {
+  const { userId } = useAuth();
   const [history, setHistory] = useState<ProactiveHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-
-    if (storedUserId) {
-      fetchHistory(storedUserId);
+    if (userId) {
+      fetchHistory(userId);
     }
-  }, []);
+  }, [userId]);
 
   const fetchHistory = async (uid: string) => {
     try {
@@ -87,19 +85,17 @@ export default function ProactivePage() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
+      <ProtectedRoute>
         <div className="flex items-center justify-center h-screen">
           <div className="text-gray-500">加载中...</div>
         </div>
-      </>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-4xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-4xl mx-auto p-6 h-full overflow-y-auto">
         <h1 className="text-3xl font-bold mb-2">主动关心记录</h1>
         <p className="text-gray-500 mb-8">
           Me2 主动关心你的历史记录
@@ -203,6 +199,6 @@ export default function ProactivePage() {
           </ul>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

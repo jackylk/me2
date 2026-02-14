@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Image as ImageIcon, Upload as UploadIcon } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import ImageUpload from '@/components/ImageUpload';
 import ImageGallery from '@/components/ImageGallery';
 
@@ -18,18 +19,16 @@ interface ImageData {
 }
 
 export default function ImagesPage() {
-  const [userId, setUserId] = useState<string>('');
+  const { userId } = useAuth();
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-    if (storedUserId) {
-      loadImages(storedUserId);
+    if (userId) {
+      loadImages(userId);
     }
-  }, []);
+  }, [userId]);
 
   const loadImages = async (uid: string) => {
     setLoading(true);
@@ -117,9 +116,8 @@ export default function ImagesPage() {
   };
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-7xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-7xl mx-auto p-6 h-full overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">图片管理</h1>
@@ -189,6 +187,6 @@ export default function ImagesPage() {
           </ul>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

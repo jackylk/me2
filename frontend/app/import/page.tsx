@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 interface ImportTask {
   task_id: string;
@@ -124,9 +124,8 @@ export default function ImportPage() {
   };
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-4xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-4xl mx-auto p-6 h-full overflow-y-auto">
         <h1 className="text-3xl font-bold mb-2">导入聊天记录</h1>
         <p className="text-gray-500 mb-8">
           快速从历史聊天记录中学习你的语气和思维方式
@@ -349,6 +348,6 @@ export default function ImportPage() {
           </ul>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

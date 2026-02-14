@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Brain, MessageCircle, Sparkles, TrendingUp } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProfileData {
   user_id: string;
@@ -16,19 +17,15 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
+  const { userId } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
-    // 获取 userId
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-
-    if (storedUserId) {
-      fetchProfile(storedUserId);
+    if (userId) {
+      fetchProfile(userId);
     }
-  }, []);
+  }, [userId]);
 
   const fetchProfile = async (uid: string) => {
     try {
@@ -70,9 +67,8 @@ export default function ProfilePage() {
     profile.emoji_usage > 0.6 ? '高' : profile.emoji_usage > 0.3 ? '中' : '低';
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-4xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-4xl mx-auto p-6 h-full overflow-y-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">你的个性画像</h1>
@@ -237,6 +233,6 @@ export default function ProfilePage() {
         </p>
       </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Brain, Sparkles, TrendingUp, Target, Loader2 } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DeepAnalysis {
   thinking_depth: string;
@@ -14,17 +15,12 @@ interface DeepAnalysis {
 }
 
 export default function AnalysisPage() {
-  const [userId, setUserId] = useState<string>('');
+  const { userId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<DeepAnalysis | null>(null);
   const [error, setError] = useState<string>('');
   const [learningValues, setLearningValues] = useState(false);
   const [learningDecisions, setLearningDecisions] = useState(false);
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-  }, []);
 
   const handleDeepAnalyze = async () => {
     if (!userId) return;
@@ -122,9 +118,8 @@ export default function AnalysisPage() {
   };
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-4xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-4xl mx-auto p-6 h-full overflow-y-auto">
         <h1 className="text-3xl font-bold mb-2">深度思维分析</h1>
         <p className="text-gray-500 mb-8">
           深入了解你的思维方式和价值观
@@ -286,6 +281,6 @@ export default function AnalysisPage() {
           </ul>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

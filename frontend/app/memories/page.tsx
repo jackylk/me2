@@ -10,7 +10,7 @@ import {
   MessageCircle,
   Loader2,
 } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import MemoryGraph from '@/components/MemoryGraph';
 import MemoryList from '@/components/MemoryList';
 import MemoryTimeline from '@/components/MemoryTimeline';
@@ -210,9 +210,8 @@ export default function MemoriesPage() {
   };
 
   return (
-    <>
-      <Navigation />
-      <div className="max-w-7xl mx-auto p-6">
+    <ProtectedRoute>
+      <div className="max-w-7xl mx-auto p-6 h-full overflow-y-auto">
         <h1 className="text-3xl font-bold mb-2">记忆管理</h1>
         <p className="text-gray-500 mb-6">查看、管理和探索你的记忆</p>
 
@@ -431,6 +430,6 @@ export default function MemoriesPage() {
           </ul>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }
