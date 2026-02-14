@@ -8,6 +8,16 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
+  debug_info?: {
+    prompt: string;
+    performance: {
+      total_time: number;
+      recall_time?: number;
+      llm_time?: number;
+      token_count?: number;
+    };
+    memories_count?: number;
+  };
 }
 
 export interface ChatRequest {
