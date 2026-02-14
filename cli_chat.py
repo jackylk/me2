@@ -91,7 +91,7 @@ class Me2CLI:
         try:
             resp = requests.post(
                 f"{self.api_url}/auth/login",
-                data={
+                json={
                     "username": username,
                     "password": password
                 },
