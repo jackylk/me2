@@ -12,6 +12,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -31,28 +32,63 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const messageToSend = input;
     setInput('');
     setIsLoading(true);
 
-    try {
-      const response = await apiClient.chat(userId, input);
-
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: response.response,
+    // 一次性添加用户消息和空的助手消息
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      {
+        role: 'assistant' as const,
+        content: '',
         timestamp: new Date().toISOString(),
-      };
+      },
+    ]);
 
-      setMessages((prev) => [...prev, assistantMessage]);
+    try {
+      let fullResponse = '';
+
+      // 使用流式API
+      for await (const chunk of apiClient.chatStream(messageToSend, sessionId, false)) {
+        if (chunk.type === 'token') {
+          // 累积响应内容
+          fullResponse += chunk.content || '';
+
+          // 更新最后一条消息（助手消息）
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastIndex = newMessages.length - 1;
+            newMessages[lastIndex] = {
+              ...newMessages[lastIndex],
+              content: fullResponse,
+            };
+            return newMessages;
+          });
+        } else if (chunk.type === 'done') {
+          // 保存session_id
+          if (chunk.session_id) {
+            setSessionId(chunk.session_id);
+          }
+          // debug_info会在后续任务中处理
+        } else if (chunk.type === 'error') {
+          throw new Error(chunk.error || '未知错误');
+        }
+      }
     } catch (error) {
       console.error('发送消息失败:', error);
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: '抱歉，我遇到了一些问题，请稍后再试。',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+
+      // 更新最后一条消息为错误消息
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        newMessages[lastIndex] = {
+          ...newMessages[lastIndex],
+          content: '抱歉，我遇到了一些问题，请稍后再试。',
+        };
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }

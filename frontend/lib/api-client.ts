@@ -22,6 +22,27 @@ export interface ChatResponse {
   memories_used: number;
 }
 
+export interface StreamChunk {
+  type: 'token' | 'done' | 'error';
+  content?: string;
+  response?: string;
+  session_id?: string;
+  memories_recalled?: number;
+  insights_used?: number;
+  history_messages_count?: number;
+  debug_info?: {
+    prompt: string;
+    performance: {
+      total_time: number;
+      recall_time?: number;
+      llm_time?: number;
+      token_count?: number;
+    };
+    memories_count?: number;
+  };
+  error?: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -42,7 +63,74 @@ class ApiClient {
   }
 
   /**
-   * 发送聊天消息
+   * 发送聊天消息（流式）
+   */
+  async *chatStream(
+    message: string,
+    sessionId?: string,
+    debugMode: boolean = false
+  ): AsyncGenerator<StreamChunk> {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('未登录');
+    }
+
+    const response = await fetch(`${this.baseUrl}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        message,
+        session_id: sessionId,
+        debug_mode: debugMode,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Chat failed: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data.trim()) {
+              try {
+                const chunk: StreamChunk = JSON.parse(data);
+                yield chunk;
+              } catch (e) {
+                console.error('Failed to parse SSE data:', data, e);
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  /**
+   * 发送聊天消息（非流式，保留向后兼容）
    */
   async chat(userId: string, message: string): Promise<ChatResponse> {
     const response = await fetch(`${this.baseUrl}/chat`, {
