@@ -9,14 +9,25 @@ export interface ChatMessage {
   content: string;
   timestamp?: string;
   debug_info?: {
-    prompt: string;
-    performance: {
-      total_time: number;
-      recall_time?: number;
-      llm_time?: number;
-      token_count?: number;
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    messages?: Array<{ role: string; content: string }>;
+    message_count?: number;
+    system_prompt?: string;
+    history_count?: number;
+    timings?: {
+      fetch_history?: number;
+      save_user_message?: number;
+      recall_memories?: number;
+      fetch_insights?: number;
+      build_prompt?: number;
+      llm_generate?: number;
+      save_to_db?: number;
+      sync_neuromemory?: number;
+      total?: number;
     };
-    memories_count?: number;
+    background_tasks?: string[];
   };
 }
 

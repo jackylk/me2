@@ -179,10 +179,10 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
               } max-w-[70%]`}
             >
               <div
-                className={`rounded-3xl px-6 py-4 backdrop-blur-sm ${
+                className={`rounded-2xl px-4 py-2.5 backdrop-blur-sm ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-br from-[#5B7FEB] to-[#4E6FDB] text-white shadow-xl shadow-blue-500/20'
-                    : 'bg-gradient-to-br from-[#2f3136] to-[#292b30] text-[#dcddde] shadow-xl shadow-black/10 border border-white/5'
+                    ? 'bg-gradient-to-br from-[#5B7FEB] to-[#4E6FDB] text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-gradient-to-br from-[#2f3136] to-[#292b30] text-[#dcddde] shadow-lg shadow-black/10 border border-white/5'
                 }`}
               >
                 {message.role === 'user' ? (
