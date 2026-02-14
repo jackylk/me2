@@ -1,5 +1,5 @@
 """认证 API 端点"""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
@@ -28,6 +28,13 @@ class TokenResponse(BaseModel):
     """Token 响应"""
     access_token: str
     token_type: str = "bearer"
+
+
+@router.options("/register")
+@router.options("/login")
+async def options_handler():
+    """处理 CORS 预检请求"""
+    return Response(status_code=200)
 
 
 @router.post("/register", response_model=TokenResponse)

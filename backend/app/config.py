@@ -40,11 +40,12 @@ class Settings(BaseSettings):
 
     # NeuroMemory 配置
     NEUROMEMORY_EXTRACTION_INTERVAL: int = 10  # 每 10 条消息提取记忆
-    NEUROMEMORY_REFLECTION_INTERVAL: int = 50  # 每 50 次提取后反思
+    NEUROMEMORY_REFLECTION_INTERVAL: int = 20  # 每 20 次提取后反思（约200条对话）
+    NEUROMEMORY_IDLE_TIMEOUT: int = 600  # 闲置 10 分钟后自动提取和反思
     NEUROMEMORY_GRAPH_ENABLED: bool = True  # 启用知识图谱
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3333", "http://127.0.0.1:3333"]
 
     # 主动关心
     PROACTIVE_CHECK_INTERVAL: int = 3600  # 每小时检查一次（未来功能）

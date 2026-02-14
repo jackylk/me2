@@ -52,14 +52,25 @@ export interface StreamChunk {
   insights_used?: number;
   history_messages_count?: number;
   debug_info?: {
-    prompt: string;
-    performance: {
-      total_time: number;
-      recall_time?: number;
-      llm_time?: number;
-      token_count?: number;
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    messages?: Array<{ role: string; content: string }>;
+    message_count?: number;
+    system_prompt?: string;
+    history_count?: number;
+    timings?: {
+      fetch_history?: number;
+      save_user_message?: number;
+      recall_memories?: number;
+      fetch_insights?: number;
+      build_prompt?: number;
+      llm_generate?: number;
+      save_to_db?: number;
+      sync_neuromemory?: number;
+      total?: number;
     };
-    memories_count?: number;
+    background_tasks?: string[];
   };
   error?: string;
 }
@@ -96,6 +107,8 @@ class ApiClient {
       throw new Error('未登录');
     }
 
+    console.log('[ApiClient] 发起流式请求', { message, sessionId, debugMode });
+
     const response = await fetch(`${this.baseUrl}/chat/stream`, {
       method: 'POST',
       headers: {
@@ -109,7 +122,11 @@ class ApiClient {
       }),
     });
 
+    console.log('[ApiClient] 收到响应', { status: response.status, ok: response.ok });
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[ApiClient] 请求失败', { status: response.status, errorText });
       throw new Error(`Chat failed: ${response.statusText}`);
     }
 
@@ -125,7 +142,10 @@ class ApiClient {
       while (true) {
         const { done, value } = await reader.read();
 
-        if (done) break;
+        if (done) {
+          console.log('[ApiClient] SSE流结束');
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -137,9 +157,10 @@ class ApiClient {
             if (data.trim()) {
               try {
                 const chunk: StreamChunk = JSON.parse(data);
+                console.log('[ApiClient] 解析chunk成功:', chunk);
                 yield chunk;
               } catch (e) {
-                console.error('Failed to parse SSE data:', data, e);
+                console.error('[ApiClient] 解析SSE数据失败:', { data, error: e });
               }
             }
           }
@@ -147,6 +168,7 @@ class ApiClient {
       }
     } finally {
       reader.releaseLock();
+      console.log('[ApiClient] SSE reader已释放');
     }
   }
 

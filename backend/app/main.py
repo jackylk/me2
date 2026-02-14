@@ -2,10 +2,18 @@
 Me2 FastAPI 主应用
 """
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.db.database import init_db, close_db
+import logging
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO if settings.DEBUG else logging.WARNING,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 try:
     from app.providers import LocalEmbedding
     USE_LOCAL_EMBEDDING = True
@@ -16,14 +24,6 @@ except ImportError:
 # OpenAI Embedding 总是导入（不依赖 torch）
 from app.providers.openai_embedding import OpenAIEmbedding
 from neuromemory import NeuroMemory, OpenAILLM, ExtractionStrategy
-import logging
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO if settings.DEBUG else logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # 全局 NeuroMemory 实例
 nm: NeuroMemory = None
@@ -77,6 +77,7 @@ async def lifespan(app: FastAPI):
             ),
             extraction=ExtractionStrategy(
                 message_interval=settings.NEUROMEMORY_EXTRACTION_INTERVAL,
+                idle_timeout=settings.NEUROMEMORY_IDLE_TIMEOUT,
                 reflection_interval=settings.NEUROMEMORY_REFLECTION_INTERVAL,
                 on_session_close=True,
                 on_shutdown=True,
@@ -117,18 +118,41 @@ app = FastAPI(
 )
 
 # 配置 CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+
+ALLOWED_ORIGINS = set(settings.ALLOWED_ORIGINS)
+
+class CORSHandler(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+
+        # OPTIONS 预检请求
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if origin in ALLOWED_ORIGINS:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "content-type, authorization"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+
+        # 正常请求
+        response = await call_next(request)
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+        return response
+
+app.add_middleware(CORSHandler)
 
 # 注册路由
-from app.api.v1 import auth, chat
+from app.api.v1 import auth, chat, memories
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(memories.router, prefix="/api/v1")
 
 
 @app.get("/")

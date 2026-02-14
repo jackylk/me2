@@ -12,7 +12,7 @@ from app.main import app
 from app.db.database import Base, get_db
 from app.config import settings
 # Import all models so they're registered with Base before create_all
-from app.db.models import User, MimicProfile, Session, ProactiveContact, ImportTask
+from app.db.models import User, Session, Message
 
 
 # ==================== 数据库 Fixtures ====================
@@ -64,7 +64,7 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest.fixture
 async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
-    """测试 HTTP 客户端"""
+    """测试 HTTP 客户端（未认证）"""
     from httpx import ASGITransport
 
     # 覆盖数据库依赖
@@ -79,6 +79,56 @@ async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
 
     # 清理
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def authenticated_client(client: AsyncClient, db_session) -> AsyncGenerator[AsyncClient, None]:
+    """已认证的测试 HTTP 客户端
+
+    自动创建测试用户并登录，返回带有 JWT token 的客户端
+    """
+    # 创建测试用户
+    test_username = "testuser"
+    test_password = "testpass123"
+    test_email = "test@example.com"
+
+    # 注册用户
+    register_resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": test_username,
+            "email": test_email,
+            "password": test_password
+        }
+    )
+
+    if register_resp.status_code != 200:
+        # 用户可能已存在，尝试登录
+        login_resp = await client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": test_username,
+                "password": test_password
+            }
+        )
+        token = login_resp.json()["access_token"]
+    else:
+        token = register_resp.json()["access_token"]
+
+    # 创建新的客户端实例，自动添加认证 header
+    class AuthenticatedClient(AsyncClient):
+        async def request(self, *args, **kwargs):
+            # 自动添加 Authorization header
+            if "headers" not in kwargs:
+                kwargs["headers"] = {}
+            kwargs["headers"]["Authorization"] = f"Bearer {token}"
+            return await super().request(*args, **kwargs)
+
+    from httpx import ASGITransport
+    transport = ASGITransport(app=app)
+
+    async with AuthenticatedClient(transport=transport, base_url="http://test") as auth_client:
+        yield auth_client
 
 
 # ==================== 测试数据 Fixtures ====================
@@ -201,23 +251,19 @@ def create_test_user(db_session):
 
 
 @pytest.fixture
-def create_test_profile(db_session):
-    """创建测试画像"""
+def create_test_session(db_session):
+    """创建测试会话"""
     async def _create(user_id: str, **kwargs):
-        from app.db.models import MimicProfile
+        from app.db.models import Session
 
-        profile = MimicProfile(
+        session = Session(
             user_id=user_id,
-            tone_style=kwargs.get("tone_style", "活泼"),
-            common_phrases=kwargs.get("common_phrases", ["哈哈"]),
-            emoji_usage=kwargs.get("emoji_usage", 0.5),
-            confidence=kwargs.get("confidence", 0.7),
-            sample_count=kwargs.get("sample_count", 10),
+            title=kwargs.get("title", "测试会话")
         )
-        db_session.add(profile)
+        db_session.add(session)
         await db_session.commit()
-        await db_session.refresh(profile)
-        return profile
+        await db_session.refresh(session)
+        return session
 
     return _create
 

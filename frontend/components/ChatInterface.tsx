@@ -55,8 +55,12 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       let fullResponse = '';
       let debugInfo: any = null;
 
+      console.log('[ChatInterface] 开始流式对话', { messageToSend, sessionId, debugMode });
+
       // 使用流式API
       for await (const chunk of apiClient.chatStream(messageToSend, sessionId, debugMode)) {
+        console.log('[ChatInterface] 收到chunk:', chunk);
+
         if (chunk.type === 'token') {
           // 累积响应内容
           fullResponse += chunk.content || '';
@@ -72,6 +76,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
             return newMessages;
           });
         } else if (chunk.type === 'done') {
+          console.log('[ChatInterface] 收到done信号', chunk);
           // 保存session_id
           if (chunk.session_id) {
             setSessionId(chunk.session_id);
@@ -79,11 +84,15 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
           // 保存debug_info
           if (chunk.debug_info) {
             debugInfo = chunk.debug_info;
+            console.log('[ChatInterface] 保存debug_info:', debugInfo);
           }
         } else if (chunk.type === 'error') {
+          console.error('[ChatInterface] 收到error chunk:', chunk);
           throw new Error(chunk.error || '未知错误');
         }
       }
+
+      console.log('[ChatInterface] 流式对话完成', { fullResponse, debugInfo });
 
       // 如果有debug信息，更新消息
       if (debugInfo) {

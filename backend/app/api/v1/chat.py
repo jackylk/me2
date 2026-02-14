@@ -1,5 +1,6 @@
 """聊天 API - 基于 JWT 认证的对话接口"""
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -10,6 +11,7 @@ from app.dependencies import get_db
 from app.dependencies.auth import get_current_user
 from app.services.conversation_engine import conversation_engine
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class ChatRequest(BaseModel):
     """聊天请求"""
     message: str
     session_id: Optional[str] = None  # 可选，不提供则创建新会话
+    debug_mode: bool = False  # 调试模式
 
 
 class ChatResponse(BaseModel):
@@ -28,6 +31,8 @@ class ChatResponse(BaseModel):
     session_id: str
     memories_recalled: int
     insights_used: int
+    history_messages_count: int = 0
+    debug_info: Optional[dict] = None  # 调试信息（仅debug_mode=True时返回）
 
 
 class SessionCreate(BaseModel):
@@ -215,21 +220,96 @@ async def chat(
             user_id=current_user.id,
             session_id=session_id,
             message=request.message,
-            db=db
+            db=db,
+            debug_mode=request.debug_mode
         )
 
         if "error" in result:
             raise HTTPException(status_code=500, detail=result["error"])
 
-        return ChatResponse(
+        response = ChatResponse(
             response=result["response"],
             session_id=session_id,
             memories_recalled=result["memories_recalled"],
-            insights_used=result["insights_used"]
+            insights_used=result["insights_used"],
+            history_messages_count=result.get("history_messages_count", 0)
         )
+
+        # 添加调试信息
+        if request.debug_mode and "debug_info" in result:
+            response.debug_info = result["debug_info"]
+
+        return response
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"聊天处理失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def chat_stream(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """流式聊天接口（SSE）
+
+    返回 Server-Sent Events 流式响应，实时推送生成的内容。
+
+    事件类型：
+    - token: 生成的文本片段
+    - done: 生成完成，包含完整响应和调试信息
+    - error: 错误信息
+    """
+    async def event_generator():
+        try:
+            # 验证或创建会话
+            session_id = request.session_id
+            if not session_id:
+                session = Session(user_id=current_user.id)
+                db.add(session)
+                await db.flush()
+                session_id = session.id
+                logger.info(f"自动创建新会话: {session_id}")
+            else:
+                stmt = select(Session).where(
+                    Session.id == session_id,
+                    Session.user_id == current_user.id
+                )
+                result = await db.execute(stmt)
+                session = result.scalar_one_or_none()
+                if not session:
+                    yield f"data: {json.dumps({'type': 'error', 'error': '会话不存在'})}\n\n"
+                    return
+
+            # 调用流式对话引擎
+            async for chunk in conversation_engine.chat_stream(
+                user_id=current_user.id,
+                session_id=session_id,
+                message=request.message,
+                db=db,
+                debug_mode=request.debug_mode
+            ):
+                # chunk可能是字符串（token）或字典（done/error）
+                if isinstance(chunk, str):
+                    # 文本token
+                    yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+                elif isinstance(chunk, dict):
+                    # 完成或错误
+                    yield f"data: {json.dumps(chunk)}\n\n"
+
+        except Exception as e:
+            logger.error(f"流式聊天失败: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # 禁用nginx缓冲
+        }
+    )
