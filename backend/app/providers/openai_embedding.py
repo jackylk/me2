@@ -72,6 +72,7 @@ class OpenAIEmbedding(EmbeddingProvider):
             logger.error(f"批量生成 embedding 失败: {e}")
             raise
 
+    @property
     def dims(self) -> int:
         """返回 embedding 维度（NeuroMemory 接口）"""
         return self._dims
