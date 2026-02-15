@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import InstallPrompt from '@/components/InstallPrompt';
 
 const AUTH_PAGES = ['/login', '/register'];
 
@@ -43,6 +44,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <MobileNav />
+      <InstallPrompt />
     </div>
   );
 }

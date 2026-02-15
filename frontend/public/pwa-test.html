@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Me2 PWA 功能测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #667eea;
+    }
+
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .status.success {
+      background: #10b981;
+      color: white;
+    }
+
+    .status.error {
+      background: #ef4444;
+      color: white;
+    }
+
+    .status.warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .status.info {
+      background: #3b82f6;
+      color: white;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    code {
+      background: #0a0a0a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+      color: #a0a0a0;
+    }
+
+    .info-item {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .info-item strong {
+      color: #667eea;
+      display: inline-block;
+      width: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 Me2 PWA 功能测试</h1>
+
+    <div class="section">
+      <h2>🔍 浏览器支持检测</h2>
+      <div id="browser-support"></div>
+    </div>
+
+    <div class="section">
+      <h2>📦 Service Worker 状态</h2>
+      <div id="sw-status"></div>
+      <button onclick="registerSW()">注册 Service Worker</button>
+      <button onclick="unregisterSW()">卸载 Service Worker</button>
+    </div>
+
+    <div class="section">
+      <h2>💾 缓存管理</h2>
+      <div id="cache-status"></div>
+      <button onclick="checkCaches()">检查缓存</button>
+      <button onclick="clearCaches()">清除缓存</button>
+    </div>
+
+    <div class="section">
+      <h2>📲 安装状态</h2>
+      <div id="install-status"></div>
+      <button onclick="promptInstall()">触发安装提示</button>
+    </div>
+
+    <div class="section">
+      <h2>🌐 网络状态</h2>
+      <div id="network-status"></div>
+      <button onclick="testOffline()">测试离线模式</button>
+    </div>
+
+    <div class="section">
+      <h2>📊 设备信息</h2>
+      <div id="device-info"></div>
+    </div>
+  </div>
+
+  <script>
+    // 浏览器支持检测
+    function checkBrowserSupport() {
+      const container = document.getElementById('browser-support');
+      const checks = [
+        { name: 'Service Worker', supported: 'serviceWorker' in navigator },
+        { name: 'Push API', supported: 'PushManager' in window },
+        { name: 'Notification API', supported: 'Notification' in window },
+        { name: 'Cache API', supported: 'caches' in window },
+        { name: 'Background Sync', supported: 'sync' in navigator.serviceWorker || false },
+      ];
+
+      container.innerHTML = checks.map(check =>
+        `<div class="status ${check.supported ? 'success' : 'error'}">
+          ${check.name}: ${check.supported ? '✅ 支持' : '❌ 不支持'}
+        </div>`
+      ).join('');
+    }
+
+    // Service Worker 状态
+    async function checkSWStatus() {
+      const container = document.getElementById('sw-status');
+
+      if (!('serviceWorker' in navigator)) {
+        container.innerHTML = '<div class="status error">浏览器不支持 Service Worker</div>';
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.getRegistration();
+
+      if (registration) {
+        const state = registration.active ? registration.active.state : '未激活';
+        container.innerHTML = `
+          <div class="status success">✅ Service Worker 已注册</div>
+          <div class="info-item"><strong>状态:</strong> ${state}</div>
+          <div class="info-item"><strong>Scope:</strong> <code>${registration.scope}</code></div>
+        `;
+      } else {
+        container.innerHTML = '<div class="status warning">⚠️ Service Worker 未注册</div>';
+      }
+    }
+
+    async function registerSW() {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('SW registered:', registration);
+        checkSWStatus();
+        alert('Service Worker 注册成功！');
+      } catch (error) {
+        console.error('SW registration failed:', error);
+        alert('注册失败: ' + error.message);
+      }
+    }
+
+    async function unregisterSW() {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        await registration.unregister();
+        checkSWStatus();
+        alert('Service Worker 已卸载');
+      }
+    }
+
+    // 缓存管理
+    async function checkCaches() {
+      const container = document.getElementById('cache-status');
+
+      if (!('caches' in window)) {
+        container.innerHTML = '<div class="status error">浏览器不支持 Cache API</div>';
+        return;
+      }
+
+      const cacheNames = await caches.keys();
+      let totalSize = 0;
+
+      const cacheInfo = await Promise.all(
+        cacheNames.map(async name => {
+          const cache = await caches.open(name);
+          const keys = await cache.keys();
+          return { name, count: keys.length };
+        })
+      );
+
+      if (cacheNames.length === 0) {
+        container.innerHTML = '<div class="status warning">暂无缓存数据</div>';
+      } else {
+        container.innerHTML = cacheInfo.map(info =>
+          `<div class="info-item">
+            <strong>${info.name}:</strong> ${info.count} 个文件
+          </div>`
+        ).join('');
+      }
+    }
+
+    async function clearCaches() {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      checkCaches();
+      alert('缓存已清除！');
+    }
+
+    // 安装状态
+    function checkInstallStatus() {
+      const container = document.getElementById('install-status');
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone
+        || document.referrer.includes('android-app://');
+
+      if (isStandalone) {
+        container.innerHTML = '<div class="status success">✅ 已安装为独立应用</div>';
+      } else {
+        container.innerHTML = '<div class="status info">ℹ️ 在浏览器中运行</div>';
+      }
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      console.log('Install prompt available');
+    });
+
+    async function promptInstall() {
+      if (!deferredPrompt) {
+        alert('安装提示不可用。可能已经安装，或浏览器不支持。');
+        return;
+      }
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('Install outcome:', outcome);
+      deferredPrompt = null;
+    }
+
+    // 网络状态
+    function checkNetworkStatus() {
+      const container = document.getElementById('network-status');
+      const online = navigator.onLine;
+
+      container.innerHTML = `
+        <div class="status ${online ? 'success' : 'error'}">
+          ${online ? '✅ 在线' : '❌ 离线'}
+        </div>
+        <div class="info-item"><strong>连接类型:</strong> ${navigator.connection ? navigator.connection.effectiveType : '未知'}</div>
+      `;
+    }
+
+    window.addEventListener('online', checkNetworkStatus);
+    window.addEventListener('offline', checkNetworkStatus);
+
+    function testOffline() {
+      alert('请打开开发者工具，切换到 Network 标签，选择 Offline 模式进行测试');
+    }
+
+    // 设备信息
+    function checkDeviceInfo() {
+      const container = document.getElementById('device-info');
+      container.innerHTML = `
+        <div class="info-item"><strong>User Agent:</strong> <code>${navigator.userAgent}</code></div>
+        <div class="info-item"><strong>平台:</strong> ${navigator.platform}</div>
+        <div class="info-item"><strong>语言:</strong> ${navigator.language}</div>
+        <div class="info-item"><strong>屏幕尺寸:</strong> ${screen.width} × ${screen.height}</div>
+        <div class="info-item"><strong>视口尺寸:</strong> ${window.innerWidth} × ${window.innerHeight}</div>
+        <div class="info-item"><strong>设备像素比:</strong> ${window.devicePixelRatio}</div>
+      `;
+    }
+
+    // 初始化
+    window.addEventListener('load', () => {
+      checkBrowserSupport();
+      checkSWStatus();
+      checkCaches();
+      checkInstallStatus();
+      checkNetworkStatus();
+      checkDeviceInfo();
+    });
+  </script>
+</body>
+</html>
