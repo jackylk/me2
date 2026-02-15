@@ -89,6 +89,7 @@ async def lifespan(app: FastAPI):
                 on_shutdown=True,
             ),
             graph_enabled=settings.NEUROMEMORY_GRAPH_ENABLED,
+            echo=settings.DEBUG,  # 启用SQL日志以调试事务问题
         )
         await nm.init()
         logger.info("✅ NeuroMemory 初始化完成")
