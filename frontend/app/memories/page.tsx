@@ -37,8 +37,15 @@ interface GraphElements {
   edges: Array<{ data: any }>;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('me2_access_token');
+  if (!token) return {};
+  return { 'Authorization': `Bearer ${token}` };
+}
+
 export default function MemoriesPage() {
-  const [userId, setUserId] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [loading, setLoading] = useState(false);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -56,20 +63,16 @@ export default function MemoriesPage() {
   const [correcting, setCorrecting] = useState(false);
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-    if (storedUserId) {
-      loadData(storedUserId);
-    }
+    loadData();
   }, []);
 
-  const loadData = async (uid: string) => {
+  const loadData = async () => {
     setLoading(true);
     try {
       await Promise.all([
-        loadMemories(uid),
-        loadStats(uid),
-        loadGraph(uid),
+        loadMemories(),
+        loadStats(),
+        loadGraph(),
       ]);
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -78,10 +81,11 @@ export default function MemoriesPage() {
     }
   };
 
-  const loadMemories = async (uid: string) => {
+  const loadMemories = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${uid}/recent?days=30&limit=100`
+        `${API_BASE}/memories/recent?days=30&limit=100`,
+        { headers: getAuthHeaders() }
       );
       if (response.ok) {
         const data = await response.json();
@@ -92,10 +96,11 @@ export default function MemoriesPage() {
     }
   };
 
-  const loadStats = async (uid: string) => {
+  const loadStats = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${uid}/stats`
+        `${API_BASE}/memories/stats`,
+        { headers: getAuthHeaders() }
       );
       if (response.ok) {
         const data = await response.json();
@@ -106,10 +111,11 @@ export default function MemoriesPage() {
     }
   };
 
-  const loadTimeline = async (uid: string, gran: 'day' | 'week' | 'month') => {
+  const loadTimeline = async (gran: 'day' | 'week' | 'month') => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${uid}/timeline?granularity=${gran}&days=30`
+        `${API_BASE}/memories/timeline?granularity=${gran}&days=30`,
+        { headers: getAuthHeaders() }
       );
       if (response.ok) {
         const data = await response.json();
@@ -120,10 +126,11 @@ export default function MemoriesPage() {
     }
   };
 
-  const loadGraph = async (uid: string) => {
+  const loadGraph = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${uid}/graph?limit=100`
+        `${API_BASE}/memories/graph?limit=100`,
+        { headers: getAuthHeaders() }
       );
       if (response.ok) {
         const data = await response.json();
@@ -135,15 +142,15 @@ export default function MemoriesPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !userId) return;
+    if (!searchQuery.trim()) return;
 
     setSearching(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${userId}/search`,
+        `${API_BASE}/memories/search`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({
             query: searchQuery,
             limit: 20,
@@ -164,15 +171,15 @@ export default function MemoriesPage() {
   };
 
   const handleCorrection = async () => {
-    if (!correctionInput.trim() || !userId) return;
+    if (!correctionInput.trim()) return;
 
     setCorrecting(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${userId}/correct`,
+        `${API_BASE}/memories/correct`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({ correction: correctionInput }),
         }
       );
@@ -181,7 +188,7 @@ export default function MemoriesPage() {
         const data = await response.json();
         alert(data.message || '纠正成功');
         setCorrectionInput('');
-        loadMemories(userId);
+        loadMemories();
       }
     } catch (error) {
       console.error('纠正失败:', error);
@@ -194,13 +201,13 @@ export default function MemoriesPage() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     if (mode === 'timeline' && timeline.length === 0) {
-      loadTimeline(userId, granularity);
+      loadTimeline(granularity);
     }
   };
 
   const handleGranularityChange = (gran: 'day' | 'week' | 'month') => {
     setGranularity(gran);
-    loadTimeline(userId, gran);
+    loadTimeline(gran);
   };
 
   const handleNodeClick = (nodeData: any) => {

@@ -1,9 +1,12 @@
 """记忆管理 API"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import logging
+
+from app.dependencies.auth import get_current_user
+from app.db.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +32,9 @@ class UpdateMemoryRequest(BaseModel):
     memory_type: Optional[str] = None
 
 
-@router.get("/{user_id}")
+@router.get("/")
 async def get_memories(
-    user_id: str,
+    current_user: User = Depends(get_current_user),
     limit: int = 50,
     offset: int = 0,
     memory_type: Optional[str] = None,
@@ -39,6 +42,8 @@ async def get_memories(
     """获取记忆列表"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         # 获取记忆（通过时间范围）
         end_time = datetime.now()
@@ -65,13 +70,18 @@ async def get_memories(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{user_id}/recent")
+@router.get("/recent")
 async def get_recent_memories(
-    user_id: str, days: int = 30, limit: int = 100, memory_type: Optional[str] = None
+    current_user: User = Depends(get_current_user),
+    days: int = 30,
+    limit: int = 100,
+    memory_type: Optional[str] = None,
 ):
     """获取最近的记忆"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         # NeuroMemory v2 的 search 会按相关度和时效性排序
         memories = await nm.search(
@@ -100,38 +110,18 @@ async def get_recent_memories(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{user_id}/{memory_id}")
-async def get_memory(user_id: str, memory_id: str):
-    """获取单个记忆详情"""
-    try:
-        from app.main import nm
-
-        # 通过 ID 搜索
-        memories = await nm.search(
-            user_id=user_id, query=memory_id, limit=100
-        )
-
-        # 查找匹配的记忆
-        for memory in memories:
-            if memory.get("id") == memory_id:
-                return memory
-
-        raise HTTPException(status_code=404, detail="记忆不存在")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取记忆详情失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{user_id}/timeline")
+@router.get("/timeline")
 async def get_timeline(
-    user_id: str, granularity: str = "day", days: int = 30
+    current_user: User = Depends(get_current_user),
+    granularity: str = "day",
+    days: int = 30,
 ):
     """获取时间线"""
     try:
         from app.main import nm
         from collections import defaultdict
+
+        user_id = current_user.id
 
         # 获取最近记忆
         memories = await nm.search(user_id=user_id, query="*", limit=500)
@@ -176,11 +166,16 @@ async def get_timeline(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{user_id}/graph")
-async def get_knowledge_graph(user_id: str, limit: int = 100):
+@router.get("/graph")
+async def get_knowledge_graph(
+    current_user: User = Depends(get_current_user),
+    limit: int = 100,
+):
     """获取知识图谱"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         # 获取记忆
         memories = await nm.search(user_id=user_id, query="*", limit=limit)
@@ -233,11 +228,16 @@ async def get_knowledge_graph(user_id: str, limit: int = 100):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{user_id}/search")
-async def search_memories(user_id: str, request: SearchRequest):
+@router.post("/search")
+async def search_memories(
+    request: SearchRequest,
+    current_user: User = Depends(get_current_user),
+):
     """语义搜索记忆"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         memories = await nm.search(
             user_id=user_id,
@@ -255,12 +255,16 @@ async def search_memories(user_id: str, request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{user_id}/stats")
-async def get_memory_stats(user_id: str):
+@router.get("/stats")
+async def get_memory_stats(
+    current_user: User = Depends(get_current_user),
+):
     """获取记忆统计信息"""
     try:
         from app.main import nm
         from collections import Counter
+
+        user_id = current_user.id
 
         # 获取所有记忆
         memories = await nm.search(user_id=user_id, query="*", limit=1000)
@@ -293,13 +297,17 @@ async def get_memory_stats(user_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/{user_id}/{memory_id}")
+@router.put("/{memory_id}")
 async def update_memory(
-    user_id: str, memory_id: str, request: UpdateMemoryRequest
+    memory_id: str,
+    request: UpdateMemoryRequest,
+    current_user: User = Depends(get_current_user),
 ):
     """更新记忆"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         # NeuroMemory v2 不支持直接更新，需要标记删除并添加新记忆
         # 这里简化实现：添加纠正记忆
@@ -327,11 +335,16 @@ async def update_memory(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{user_id}/{memory_id}")
-async def delete_memory(user_id: str, memory_id: str):
+@router.delete("/{memory_id}")
+async def delete_memory(
+    memory_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """删除记忆（标记删除）"""
     try:
         from app.main import nm
+
+        user_id = current_user.id
 
         # NeuroMemory v2 不支持物理删除，使用标记删除
         result = await nm.add(
@@ -347,13 +360,17 @@ async def delete_memory(user_id: str, memory_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{user_id}/correct")
-async def conversational_correct(user_id: str, request: CorrectionRequest):
+@router.post("/correct")
+async def conversational_correct(
+    request: CorrectionRequest,
+    current_user: User = Depends(get_current_user),
+):
     """对话式纠正"""
     try:
         from app.main import nm
         from app.services.llm_client import LLMClient
 
+        user_id = current_user.id
         llm = LLMClient()
 
         # 使用 LLM 理解纠正意图
@@ -406,4 +423,33 @@ async def conversational_correct(user_id: str, request: CorrectionRequest):
         }
     except Exception as e:
         logger.error(f"对话式纠正失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{memory_id}")
+async def get_memory(
+    memory_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """获取单个记忆详情"""
+    try:
+        from app.main import nm
+
+        user_id = current_user.id
+
+        # 通过 ID 搜索
+        memories = await nm.search(
+            user_id=user_id, query=memory_id, limit=100
+        )
+
+        # 查找匹配的记忆
+        for memory in memories:
+            if memory.get("id") == memory_id:
+                return memory
+
+        raise HTTPException(status_code=404, detail="记忆不存在")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取记忆详情失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

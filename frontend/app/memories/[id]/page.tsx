@@ -42,11 +42,18 @@ interface Memory {
   score?: number;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('me2_access_token');
+  if (!token) return {};
+  return { 'Authorization': `Bearer ${token}` };
+}
+
 export default function MemoryDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
 
-  const [userId, setUserId] = useState<string>('');
   const [memory, setMemory] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,19 +66,16 @@ export default function MemoryDetailPage({ params }: PageProps) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('me2_user_id') || '';
-    setUserId(storedUserId);
-    if (storedUserId) {
-      loadMemory(storedUserId);
-    }
+    loadMemory();
   }, [id]);
 
-  const loadMemory = async (uid: string) => {
+  const loadMemory = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${uid}/${id}`
+        `${API_BASE}/memories/${id}`,
+        { headers: getAuthHeaders() }
       );
 
       if (!response.ok) {
@@ -90,15 +94,15 @@ export default function MemoryDetailPage({ params }: PageProps) {
   };
 
   const handleSave = async () => {
-    if (!memory || !userId) return;
+    if (!memory) return;
 
     setSaving(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${userId}/${id}`,
+        `${API_BASE}/memories/${id}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({
             content: editedContent !== memory.content ? editedContent : undefined,
             memory_type: editedType !== memory.memory_type ? editedType : undefined,
@@ -111,7 +115,7 @@ export default function MemoryDetailPage({ params }: PageProps) {
       }
 
       // 重新加载记忆
-      await loadMemory(userId);
+      await loadMemory();
       setIsEditing(false);
       alert('更新成功！');
     } catch (err: any) {
@@ -126,14 +130,13 @@ export default function MemoryDetailPage({ params }: PageProps) {
       return;
     }
 
-    if (!userId) return;
-
     setDeleting(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/memories/${userId}/${id}`,
+        `${API_BASE}/memories/${id}`,
         {
           method: 'DELETE',
+          headers: getAuthHeaders(),
         }
       );
 

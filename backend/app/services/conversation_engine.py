@@ -1,11 +1,12 @@
 """对话引擎 - 基于 NeuroMemory v2 的温暖陪伴式聊天"""
-from typing import Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.llm_client import LLMClient
-from app.db.models import Message, Session
-from sqlalchemy import select
+import asyncio
 import logging
 import time
+from typing import Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.services.llm_client import LLMClient
+from app.db.models import Message, Session
 
 logger = logging.getLogger(__name__)
 
@@ -77,27 +78,18 @@ class ConversationEngine:
             timings['save_user_message'] = time.time() - step_start
             logger.info(f"保存用户消息: {user_msg.id}")
 
-            # === 3. 召回相关记忆（三因子检索）===
+            # === 3-4. 并发召回记忆和获取洞察 ===
+            # 🚀 使用 asyncio.gather 并发执行，减少等待时间
+            # NeuroMemory 内部会缓存 query embedding，避免重复计算
             step_start = time.time()
-            recall_result = await nm.recall(
-                user_id=user_id,
-                query=message,
-                limit=5
-            )
-            memories = recall_result["merged"]
-            timings['recall_memories'] = time.time() - step_start
-            logger.info(f"召回 {len(memories)} 条记忆")
+            recall_task = nm.recall(user_id=user_id, query=message, limit=5)
+            insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
 
-            # === 4. 获取洞察（深度理解）===
-            step_start = time.time()
-            insights = await nm.search(
-                user_id=user_id,
-                query=message,
-                memory_type="insight",
-                limit=3
-            )
-            timings['fetch_insights'] = time.time() - step_start
-            logger.info(f"获取 {len(insights)} 条洞察")
+            recall_result, insights = await asyncio.gather(recall_task, insights_task)
+            memories = recall_result["merged"]
+
+            timings['recall_memories'] = time.time() - step_start
+            logger.info(f"召回 {len(memories)} 条记忆 + {len(insights)} 条洞察（并发执行）")
 
             # === 5. 构建温暖的 system prompt ===
             step_start = time.time()
@@ -169,26 +161,21 @@ class ConversationEngine:
 
             # === 9. 同步到 NeuroMemory（用于记忆提取）===
             step_start = time.time()
-            # 添加用户消息和AI回复
-            # 注意：add_message 可能触发自动提取或反思（后台异步）
+            # 只添加用户消息（AI 回复只存 Me2 数据库，不存 NeuroMemory）
+            # NeuroMemory 已优化为只对 user 消息计算 embedding 和提取记忆
             await nm.conversations.add_message(
                 user_id=user_id,
                 role="user",
                 content=message
             )
-            await nm.conversations.add_message(
-                user_id=user_id,
-                role="assistant",
-                content=response
-            )
             timings['sync_neuromemory'] = time.time() - step_start
 
             # 记录触发的后台任务（用于调试显示）
             background_tasks = []
-            # 检查是否会触发extract（每10条消息）
-            msg_count = len(history_messages) + 2  # 历史 + 本轮的2条
+            # 检查是否会触发extract（每10条用户消息）
+            msg_count = len(history_messages) + 1  # 历史 + 本轮的用户消息
             if msg_count % 10 == 0:
-                background_tasks.append(f"提取记忆: 第{msg_count}条消息触发自动提取（事实/偏好/关系）")
+                background_tasks.append(f"提取记忆: 第{msg_count}条用户消息触发自动提取（事实/偏好/关系）")
 
             # 检查是否会触发reflect（每20次提取后）
             extract_count = msg_count // 10
@@ -377,31 +364,19 @@ class ConversationEngine:
             await db.flush()
             timings['save_user_message'] = time.time() - step_start
 
+            # 🚀 并发召回记忆和获取洞察
             step_start = time.time()
             try:
-                recall_result = await nm.recall(
-                    user_id=user_id,
-                    query=message,
-                    limit=5
-                )
+                recall_task = nm.recall(user_id=user_id, query=message, limit=5)
+                insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
+
+                recall_result, insights = await asyncio.gather(recall_task, insights_task)
                 memories = recall_result["merged"]
             except Exception as e:
-                logger.warning(f"记忆召回失败（可能是 embedding 未配置）: {e}")
+                logger.warning(f"记忆召回/洞察搜索失败: {e}")
                 memories = []
-            timings['recall_memories'] = time.time() - step_start
-
-            step_start = time.time()
-            try:
-                insights = await nm.search(
-                    user_id=user_id,
-                    query=message,
-                    memory_type="insight",
-                    limit=3
-                )
-            except Exception as e:
-                logger.warning(f"洞察搜索失败（可能是 embedding 未配置）: {e}")
                 insights = []
-            timings['fetch_insights'] = time.time() - step_start
+            timings['recall_memories'] = time.time() - step_start
 
             step_start = time.time()
             system_prompt = self._build_warm_prompt(memories, insights)
@@ -471,23 +446,19 @@ class ConversationEngine:
             timings['save_to_db'] = time.time() - step_start
 
             step_start = time.time()
+            # 只添加用户消息（AI 回复只存 Me2 数据库，不存 NeuroMemory）
             await nm.conversations.add_message(
                 user_id=user_id,
                 role="user",
                 content=message
             )
-            await nm.conversations.add_message(
-                user_id=user_id,
-                role="assistant",
-                content=full_response
-            )
             timings['sync_neuromemory'] = time.time() - step_start
 
             # 记录后台任务
             background_tasks = []
-            msg_count = len(history_messages) + 2
+            msg_count = len(history_messages) + 1  # 只计算用户消息
             if msg_count % 10 == 0:
-                background_tasks.append(f"提取记忆: 第{msg_count}条消息触发自动提取（事实/偏好/关系）")
+                background_tasks.append(f"提取记忆: 第{msg_count}条用户消息触发自动提取（事实/偏好/关系）")
             extract_count = msg_count // 10
             if extract_count > 0 and extract_count % 20 == 0:
                 background_tasks.append(f"记忆整理: 第{extract_count}次提取触发反思（生成洞察+更新画像）")
