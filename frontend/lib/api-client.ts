@@ -4,10 +4,17 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+export interface RecalledMemory {
+  content: string;
+  score: number;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
+  memories_recalled?: number;
+  recalled_summaries?: RecalledMemory[];
   debug_info?: {
     model?: string;
     temperature?: number;
@@ -43,12 +50,38 @@ export interface ChatResponse {
   memories_used: number;
 }
 
+export interface SessionInfo {
+  id: string;
+  title: string | null;
+  created_at: string;
+  last_active_at: string;
+  message_count: number;
+  pinned: boolean;
+}
+
+export interface SessionMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+  memories_recalled?: number;
+  recalled_summaries?: RecalledMemory[];
+}
+
+export interface SessionExportData {
+  session: SessionInfo;
+  messages: SessionMessage[];
+}
+
 export interface StreamChunk {
   type: 'token' | 'done' | 'error';
   content?: string;
   response?: string;
   session_id?: string;
+  session_title?: string;
+  is_new_session?: boolean;
   memories_recalled?: number;
+  recalled_summaries?: RecalledMemory[];
   insights_used?: number;
   history_messages_count?: number;
   debug_info?: {
@@ -236,6 +269,74 @@ class ApiClient {
       throw new Error(`Get user failed: ${response.statusText}`);
     }
 
+    return response.json();
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('me2_access_token');
+    if (!token) throw new Error('未登录');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  }
+
+  async listSessions(): Promise<SessionInfo[]> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`List sessions failed: ${response.statusText}`);
+    return response.json();
+  }
+
+  async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/${sessionId}/messages`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Get messages failed: ${response.statusText}`);
+    return response.json();
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Delete session failed: ${response.statusText}`);
+  }
+
+  async updateSession(sessionId: string, data: { title?: string; pinned?: boolean }): Promise<SessionInfo> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`Update session failed: ${response.statusText}`);
+    return response.json();
+  }
+
+  async searchSessions(query: string): Promise<SessionInfo[]> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/search?q=${encodeURIComponent(query)}`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Search sessions failed: ${response.statusText}`);
+    return response.json();
+  }
+
+  async exportSession(sessionId: string): Promise<SessionExportData> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/${sessionId}/export`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Export session failed: ${response.statusText}`);
+    return response.json();
+  }
+
+  async generateTitle(sessionId: string): Promise<{ title: string }> {
+    const response = await fetch(`${this.baseUrl}/chat/sessions/${sessionId}/generate-title`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Generate title failed: ${response.statusText}`);
     return response.json();
   }
 }

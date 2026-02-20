@@ -44,7 +44,7 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch 事件 - 网络优先策略（API），缓存优先策略（静态资源）
+// Fetch 事件
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -60,6 +60,27 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .catch(() => {
           return caches.match('/offline.html');
+        })
+    );
+    return;
+  }
+
+  // HTML 导航请求 - 网络优先，失败时使用缓存
+  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // 更新缓存
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || caches.match('/offline.html');
+          });
         })
     );
     return;

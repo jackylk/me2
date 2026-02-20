@@ -466,12 +466,22 @@ class ConversationEngine:
             timings['total'] = time.time() - start_time
 
             # === 发送完成信号 ===
+            # 始终携带召回的记忆摘要（供前端展示）
+            recalled_summaries = [
+                {
+                    "content": m.get("content", "")[:100],
+                    "score": round(m.get("score", 0), 2),
+                }
+                for m in memories
+            ] if memories else []
+
             done_data = {
                 "type": "done",
                 "session_id": session_id,
                 "memories_recalled": len(memories),
                 "insights_used": len(insights),
-                "history_messages_count": len(history_messages)
+                "history_messages_count": len(history_messages),
+                "recalled_summaries": recalled_summaries
             }
 
             if debug_mode:

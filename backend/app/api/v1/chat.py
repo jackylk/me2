@@ -1,9 +1,9 @@
 """聊天 API - 基于 JWT 认证的对话接口"""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func as sql_func, or_, case
 from typing import Optional, List
 from datetime import datetime
 from app.db.models import User, Session, Message
@@ -40,6 +40,12 @@ class SessionCreate(BaseModel):
     title: Optional[str] = None
 
 
+class SessionUpdate(BaseModel):
+    """更新会话请求"""
+    title: Optional[str] = None
+    pinned: Optional[bool] = None
+
+
 class SessionResponse(BaseModel):
     """会话响应"""
     id: str
@@ -47,7 +53,12 @@ class SessionResponse(BaseModel):
     created_at: datetime
     last_active_at: datetime
     message_count: int
+    pinned: bool = False
 
+
+class RecalledMemorySummary(BaseModel):
+    content: str
+    score: float
 
 class MessageResponse(BaseModel):
     """消息响应"""
@@ -59,6 +70,36 @@ class MessageResponse(BaseModel):
     system_prompt: Optional[str] = None
     memories_recalled: Optional[int] = None
     insights_used: Optional[int] = None
+    recalled_summaries: Optional[List[RecalledMemorySummary]] = None
+
+
+class SessionExport(BaseModel):
+    """会话导出响应"""
+    session: SessionResponse
+    messages: List[MessageResponse]
+
+
+def _get_recalled_summaries(msg) -> Optional[List[RecalledMemorySummary]]:
+    """从 Message.recalled_memories 提取摘要"""
+    if not msg.recalled_memories or msg.role != "assistant":
+        return None
+    try:
+        return [
+            RecalledMemorySummary(
+                content=m.get("content", "")[:100],
+                score=round(m.get("score", 0), 2),
+            )
+            for m in msg.recalled_memories
+        ]
+    except Exception:
+        return None
+
+
+def _get_pinned(session: Session) -> bool:
+    """从 session.meta 中读取 pinned 状态"""
+    if session.meta and isinstance(session.meta, dict):
+        return session.meta.get("pinned", False)
+    return False
 
 
 @router.post("/sessions", response_model=SessionResponse)
@@ -84,7 +125,8 @@ async def create_session(
             title=session.title,
             created_at=session.created_at,
             last_active_at=session.last_active_at,
-            message_count=0
+            message_count=0,
+            pinned=_get_pinned(session)
         )
 
     except Exception as e:
@@ -93,12 +135,76 @@ async def create_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/sessions/search", response_model=List[SessionResponse])
+async def search_sessions(
+    q: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """按 title 和消息 content 模糊搜索会话"""
+    try:
+        keyword = f"%{q}%"
+
+        # 搜索标题匹配的会话
+        title_stmt = select(Session.id).where(
+            Session.user_id == current_user.id,
+            Session.title.ilike(keyword)
+        )
+
+        # 搜索消息内容匹配的会话
+        content_stmt = select(Message.session_id).where(
+            Message.user_id == current_user.id,
+            Message.content.ilike(keyword)
+        ).distinct()
+
+        title_result = await db.execute(title_stmt)
+        content_result = await db.execute(content_stmt)
+
+        title_ids = {row[0] for row in title_result}
+        content_ids = {row[0] for row in content_result}
+        all_ids = title_ids | content_ids
+
+        if not all_ids:
+            return []
+
+        # 获取匹配的会话详情
+        stmt = select(Session).where(
+            Session.id.in_(all_ids)
+        ).order_by(desc(Session.last_active_at))
+
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+
+        session_responses = []
+        for session in sessions:
+            msg_count_stmt = select(sql_func.count(Message.id)).where(
+                Message.session_id == session.id
+            )
+            msg_result = await db.execute(msg_count_stmt)
+            message_count = msg_result.scalar() or 0
+
+            session_responses.append(SessionResponse(
+                id=session.id,
+                title=session.title,
+                created_at=session.created_at,
+                last_active_at=session.last_active_at,
+                message_count=message_count,
+                pinned=_get_pinned(session)
+            ))
+
+        return session_responses
+
+    except Exception as e:
+        logger.error(f"搜索会话失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/sessions", response_model=List[SessionResponse])
 async def list_sessions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取用户的会话列表"""
+    """获取用户的会话列表（置顶会话排前面）"""
     try:
         stmt = select(Session).where(
             Session.user_id == current_user.id
@@ -110,21 +216,25 @@ async def list_sessions(
         # 获取每个会话的消息数量
         session_responses = []
         for session in sessions:
-            msg_count_stmt = select(Message).where(
+            msg_count_stmt = select(sql_func.count(Message.id)).where(
                 Message.session_id == session.id
             )
             msg_result = await db.execute(msg_count_stmt)
-            message_count = len(msg_result.scalars().all())
+            message_count = msg_result.scalar() or 0
 
             session_responses.append(SessionResponse(
                 id=session.id,
                 title=session.title,
                 created_at=session.created_at,
                 last_active_at=session.last_active_at,
-                message_count=message_count
+                message_count=message_count,
+                pinned=_get_pinned(session)
             ))
 
-        return session_responses
+        # 置顶会话排前面，其余按 last_active_at 降序
+        pinned = [s for s in session_responses if s.pinned]
+        unpinned = [s for s in session_responses if not s.pinned]
+        return pinned + unpinned
 
     except Exception as e:
         logger.error(f"获取会话列表失败: {e}", exc_info=True)
@@ -165,13 +275,205 @@ async def get_session_messages(
             created_at=msg.created_at,
             system_prompt=msg.system_prompt,
             memories_recalled=msg.meta.get("memories_count") if msg.meta else None,
-            insights_used=msg.meta.get("insights_count") if msg.meta else None
+            insights_used=msg.meta.get("insights_count") if msg.meta else None,
+            recalled_summaries=_get_recalled_summaries(msg)
         ) for msg in messages]
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取消息历史失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sessions/{session_id}/export", response_model=SessionExport)
+async def export_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """导出会话（session + messages JSON）"""
+    try:
+        stmt = select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id
+        )
+        result = await db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+
+        # 获取消息
+        msg_stmt = select(Message).where(
+            Message.session_id == session_id
+        ).order_by(Message.created_at)
+        msg_result = await db.execute(msg_stmt)
+        messages = msg_result.scalars().all()
+
+        # 消息数量
+        message_count = len(messages)
+
+        session_resp = SessionResponse(
+            id=session.id,
+            title=session.title,
+            created_at=session.created_at,
+            last_active_at=session.last_active_at,
+            message_count=message_count,
+            pinned=_get_pinned(session)
+        )
+
+        message_resps = [MessageResponse(
+            id=msg.id,
+            role=msg.role,
+            content=msg.content,
+            created_at=msg.created_at,
+            system_prompt=msg.system_prompt,
+            memories_recalled=msg.meta.get("memories_count") if msg.meta else None,
+            insights_used=msg.meta.get("insights_count") if msg.meta else None,
+            recalled_summaries=_get_recalled_summaries(msg)
+        ) for msg in messages]
+
+        return SessionExport(session=session_resp, messages=message_resps)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"导出会话失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionResponse)
+async def update_session(
+    session_id: str,
+    request: SessionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """更新会话（title 和/或 pinned）"""
+    try:
+        stmt = select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id
+        )
+        result = await db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+
+        if request.title is not None:
+            session.title = request.title
+
+        if request.pinned is not None:
+            meta = session.meta or {}
+            meta["pinned"] = request.pinned
+            session.meta = meta
+
+        await db.commit()
+        await db.refresh(session)
+
+        msg_count_stmt = select(sql_func.count(Message.id)).where(
+            Message.session_id == session.id
+        )
+        msg_result = await db.execute(msg_count_stmt)
+        message_count = msg_result.scalar() or 0
+
+        return SessionResponse(
+            id=session.id,
+            title=session.title,
+            created_at=session.created_at,
+            last_active_at=session.last_active_at,
+            message_count=message_count,
+            pinned=_get_pinned(session)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新会话失败: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """删除会话及其所有消息（CASCADE）"""
+    try:
+        stmt = select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id
+        )
+        result = await db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+
+        await db.delete(session)
+        await db.commit()
+
+        logger.info(f"删除会话: {session_id}")
+        return {"detail": "会话已删除"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除会话失败: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sessions/{session_id}/generate-title")
+async def generate_title(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """用第一条用户消息截取前20字作标题"""
+    try:
+        stmt = select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id
+        )
+        result = await db.execute(stmt)
+        session = result.scalar_one_or_none()
+
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+
+        # 获取第一条用户消息
+        msg_stmt = select(Message).where(
+            Message.session_id == session_id,
+            Message.role == "user"
+        ).order_by(Message.created_at).limit(1)
+
+        msg_result = await db.execute(msg_stmt)
+        first_msg = msg_result.scalar_one_or_none()
+
+        if not first_msg:
+            return {"title": "新对话"}
+
+        # 截取前20字作为标题
+        title = first_msg.content[:20]
+        if len(first_msg.content) > 20:
+            title += "..."
+
+        session.title = title
+        await db.commit()
+
+        logger.info(f"生成会话标题: {session_id} -> {title}")
+        return {"title": title}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成标题失败: {e}", exc_info=True)
+        await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -185,14 +487,6 @@ async def chat(
 
     需要 JWT 认证。user_id 从 token 中获取。
     如果不提供 session_id，会自动创建新会话。
-
-    Args:
-        request: 聊天请求
-        current_user: 当前认证用户（从 JWT 获取）
-        db: 数据库会话
-
-    Returns:
-        聊天响应
     """
     try:
         # 如果没有提供 session_id，创建新会话
@@ -267,6 +561,7 @@ async def chat_stream(
         try:
             # 验证或创建会话
             session_id = request.session_id
+            is_new_session = not session_id
             if not session_id:
                 session = Session(user_id=current_user.id)
                 db.add(session)
@@ -297,7 +592,14 @@ async def chat_stream(
                     # 文本token
                     yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
                 elif isinstance(chunk, dict):
-                    # 完成或错误
+                    # 完成事件：注入 session_title 和 is_new_session
+                    if chunk.get("type") == "done":
+                        # 获取会话标题
+                        sess_stmt = select(Session).where(Session.id == session_id)
+                        sess_result = await db.execute(sess_stmt)
+                        sess = sess_result.scalar_one_or_none()
+                        chunk["session_title"] = sess.title if sess else None
+                        chunk["is_new_session"] = is_new_session
                     yield f"data: {json.dumps(chunk)}\n\n"
 
         except Exception as e:
