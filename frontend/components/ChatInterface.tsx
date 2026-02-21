@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Bot, Bug, Brain, ChevronDown, ChevronUp, Menu, Plus } from 'lucide-react';
+import { Send, Loader2, Sparkles, Bug, Brain, ChevronDown, ChevronUp, Menu, Plus } from 'lucide-react';
 import { apiClient, ChatMessage, StreamChunk, RecalledMemory } from '@/lib/api-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -219,8 +219,8 @@ export default function ChatInterface({
 
             {!loadingHistory && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 md:mb-6">
-                  <Bot className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground/50" />
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-amber-400/20 to-rose-400/20 flex items-center justify-center mb-4 md:mb-6">
+                  <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-amber-400/60" />
                 </div>
                 <p className="text-lg md:text-xl font-medium text-foreground/80 mb-2">开始和 Me2 聊天吧！</p>
                 <p className="text-sm text-muted-foreground/60">我会记住你说的每一句话</p>
@@ -240,8 +240,8 @@ export default function ChatInterface({
                 >
                   {message.role === 'assistant' && (
                     <div className="flex-shrink-0">
-                      <div className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-[#3a3d42] to-[#2a2d32] flex items-center justify-center shadow-lg">
-                        <Bot className="w-4 h-4 md:w-5 md:h-5 text-blue-400/80" />
+                      <div className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-rose-500/20 flex items-center justify-center shadow-lg border border-amber-500/10">
+                        <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-amber-400/90" />
                       </div>
                     </div>
                   )}
@@ -290,12 +290,12 @@ export default function ChatInterface({
             {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content && (
               <div className="flex justify-start gap-2.5 md:gap-4 animate-in fade-in duration-300">
                 <div className="flex-shrink-0">
-                  <div className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-[#3a3d42] to-[#2a2d32] flex items-center justify-center shadow-lg">
-                    <Bot className="w-4 h-4 md:w-5 md:h-5 text-blue-400/80" />
+                  <div className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-rose-500/20 flex items-center justify-center shadow-lg border border-amber-500/10">
+                    <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-amber-400/90" />
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-[#2f3136] to-[#292b30] rounded-3xl px-5 py-3 md:px-6 md:py-4 shadow-xl shadow-black/10 border border-white/5">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-400/60" />
+                  <Loader2 className="w-5 h-5 animate-spin text-amber-400/60" />
                 </div>
               </div>
             )}
