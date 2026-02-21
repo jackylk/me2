@@ -390,17 +390,23 @@ async def reset_all_user_data(
         try:
             profile_items = await nm.kv.list(current_user.id, "profile")
             for item in profile_items:
-                await nm.kv.delete(current_user.id, "profile", item.key)
+                try:
+                    await nm.kv.delete(current_user.id, "profile", item.key)
+                except Exception as e:
+                    logger.warning(f"清除 profile KV 条目 {item.key} 失败: {e}", exc_info=True)
         except Exception as e:
-            logger.warning(f"清除 profile KV 失败: {e}")
+            logger.warning(f"列取 profile KV 失败: {e}", exc_info=True)
 
         # 6. 清除 Preferences KV
         try:
             pref_items = await nm.kv.list(current_user.id, "preferences")
             for item in pref_items:
-                await nm.kv.delete(current_user.id, "preferences", item.key)
+                try:
+                    await nm.kv.delete(current_user.id, "preferences", item.key)
+                except Exception as e:
+                    logger.warning(f"清除 preferences KV 条目 {item.key} 失败: {e}", exc_info=True)
         except Exception as e:
-            logger.warning(f"清除 preferences KV 失败: {e}")
+            logger.warning(f"列取 preferences KV 失败: {e}", exc_info=True)
 
         return {
             "success": True,
