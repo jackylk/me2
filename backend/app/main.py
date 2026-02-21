@@ -14,16 +14,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-try:
-    from app.providers import LocalEmbedding
+from neuromemory import (
+    NeuroMemory, OpenAILLM, ExtractionStrategy,
+    SiliconFlowEmbedding, OpenAIEmbedding,
+)
+
+from neuromemory import SentenceTransformerEmbedding
+
+if SentenceTransformerEmbedding is not None:
     USE_LOCAL_EMBEDDING = True
-except ImportError:
+else:
     USE_LOCAL_EMBEDDING = False
     logger.warning("⚠️  sentence-transformers 未安装，使用远程 Embedding API")
-
-# OpenAI Embedding 总是导入（不依赖 torch）
-from app.providers.openai_embedding import OpenAIEmbedding
-from neuromemory import NeuroMemory, OpenAILLM, ExtractionStrategy
 
 # 全局 NeuroMemory 实例
 nm: NeuroMemory = None
@@ -51,31 +53,40 @@ async def lifespan(app: FastAPI):
             or (settings.EMBEDDING_PROVIDER == "auto" and USE_LOCAL_EMBEDDING)
         )
 
-        if use_local:
+        if use_local and SentenceTransformerEmbedding:
             try:
                 logger.info("📦 尝试使用本地 Embedding 模型...")
-                embedding_provider = LocalEmbedding(model_name=settings.EMBEDDING_MODEL)
+                embedding_provider = SentenceTransformerEmbedding(
+                    model=settings.EMBEDDING_MODEL,
+                )
                 logger.info("✅ 本地 Embedding 初始化成功")
             except Exception as e:
                 logger.warning(f"⚠️  本地 Embedding 初始化失败: {e}")
                 logger.info("🌐 切换到远程 Embedding API")
 
         if embedding_provider is None:
-            logger.info("🌐 使用远程 Embedding API (OpenAI 兼容)")
             api_key = settings.OPENAI_API_KEY or settings.DEEPSEEK_API_KEY
             base_url = settings.OPENAI_BASE_URL
             model = settings.REMOTE_EMBEDDING_MODEL
             dimensions = settings.REMOTE_EMBEDDING_DIMENSIONS
 
-            logger.info(f"🔑 Embedding API: {base_url}")
-            logger.info(f"📦 Embedding Model: {model} ({dimensions}D)")
-
-            embedding_provider = OpenAIEmbedding(
-                api_key=api_key,
-                base_url=base_url,
-                model=model,
-                dimensions=dimensions
-            )
+            # SiliconFlow 使用专用 Provider
+            if "siliconflow" in base_url:
+                logger.info(f"🌐 使用 SiliconFlowEmbedding: {model} ({dimensions}D)")
+                embedding_provider = SiliconFlowEmbedding(
+                    api_key=api_key,
+                    model=model,
+                    base_url=base_url,
+                    dimensions=dimensions,
+                )
+            else:
+                logger.info(f"🌐 使用 OpenAIEmbedding: {model} ({dimensions}D)")
+                embedding_provider = OpenAIEmbedding(
+                    api_key=api_key,
+                    model=model,
+                    base_url=base_url,
+                    dimensions=dimensions,
+                )
 
         nm = NeuroMemory(
             database_url=settings.DATABASE_URL,

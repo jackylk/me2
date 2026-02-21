@@ -87,13 +87,15 @@ class ConversationEngine:
 
             recall_result, insights = await asyncio.gather(recall_task, insights_task)
             memories = recall_result["merged"]
+            graph_context = recall_result.get("graph_context", [])
+            user_profile = recall_result.get("user_profile", {})
 
             timings['recall_memories'] = time.time() - step_start
-            logger.info(f"召回 {len(memories)} 条记忆 + {len(insights)} 条洞察（并发执行）")
+            logger.info(f"召回 {len(memories)} 条记忆 + {len(insights)} 条洞察 + {len(graph_context)} 条图谱（并发执行）")
 
             # === 5. 构建温暖的 system prompt ===
             step_start = time.time()
-            system_prompt = self._build_warm_prompt(memories, insights)
+            system_prompt = self._build_warm_prompt(memories, insights, graph_context, user_profile)
             timings['build_prompt'] = time.time() - step_start
 
             # === 6. 调用 LLM 生成回复（包含历史对话）===
@@ -226,13 +228,17 @@ class ConversationEngine:
     def _build_warm_prompt(
         self,
         memories: list[dict],
-        insights: list[dict]
+        insights: list[dict],
+        graph_context: list[str] | None = None,
+        user_profile: dict | None = None,
     ) -> str:
         """构建温暖、支持性的 system prompt
 
         Args:
             memories: 召回的记忆列表
             insights: 洞察列表
+            graph_context: 知识图谱三元组列表（如 ["用户 → 喜欢 → 咖啡"]）
+            user_profile: 用户画像字典（如 {"identity": "...", "interests": [...]}）
 
         Returns:
             system prompt 字符串
@@ -266,17 +272,47 @@ class ConversationEngine:
             f"- {i['content']}" for i in insights
         ]) if insights else "暂无深度理解"
 
+        # 格式化用户画像
+        profile_context = ""
+        if user_profile:
+            profile_lines = []
+            label_map = {
+                "identity": "身份",
+                "occupation": "职业",
+                "interests": "兴趣",
+                "preferences": "偏好",
+                "values": "价值观",
+                "relationships": "关系",
+                "personality": "性格",
+            }
+            for key, value in user_profile.items():
+                label = label_map.get(key, key)
+                if isinstance(value, list):
+                    profile_lines.append(f"- {label}: {', '.join(str(v) for v in value)}")
+                else:
+                    profile_lines.append(f"- {label}: {value}")
+            if profile_lines:
+                profile_context = "\n**你了解的 ta**：\n" + "\n".join(profile_lines)
+
+        # 格式化知识图谱
+        graph_section = ""
+        if graph_context:
+            graph_section = "\n**ta 的关系网络**：\n" + "\n".join(
+                f"- {triple}" for triple in graph_context[:10]
+            )
+
         # 提取情感上下文
         emotional_context = self._extract_emotional_context(memories)
 
         return f"""你是一个温暖、懂 ta 的朋友。
+{profile_context}
 
 **你记得关于 ta 的这些事**：
 {memory_context}
 
 **你对 ta 的理解**：
 {insight_context}
-
+{graph_section}
 {emotional_context}
 
 **重要指引**：
@@ -372,14 +408,18 @@ class ConversationEngine:
 
                 recall_result, insights = await asyncio.gather(recall_task, insights_task)
                 memories = recall_result["merged"]
+                graph_context = recall_result.get("graph_context", [])
+                user_profile = recall_result.get("user_profile", {})
             except Exception as e:
                 logger.warning(f"记忆召回/洞察搜索失败: {e}")
                 memories = []
                 insights = []
+                graph_context = []
+                user_profile = {}
             timings['recall_memories'] = time.time() - step_start
 
             step_start = time.time()
-            system_prompt = self._build_warm_prompt(memories, insights)
+            system_prompt = self._build_warm_prompt(memories, insights, graph_context, user_profile)
             timings['build_prompt'] = time.time() - step_start
 
             # === 6. 流式调用 LLM ===

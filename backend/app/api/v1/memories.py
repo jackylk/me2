@@ -1,7 +1,7 @@
-"""记忆管理 API"""
+"""记忆管理 API — 与 NeuroMemory 数据模型对齐"""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from datetime import datetime, timedelta
 import logging
 
@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memories", tags=["记忆管理"])
 
 
+# ── Request / Response Models ──────────────────────────────────────────
+
 class SearchRequest(BaseModel):
-    """搜索请求"""
     query: str
     limit: int = 20
     threshold: float = 0.7
@@ -22,56 +23,358 @@ class SearchRequest(BaseModel):
 
 
 class CorrectionRequest(BaseModel):
-    """纠正请求"""
     correction: str
 
 
 class UpdateMemoryRequest(BaseModel):
-    """更新记忆请求"""
     content: Optional[str] = None
     memory_type: Optional[str] = None
 
 
-@router.get("/")
-async def get_memories(
-    current_user: User = Depends(get_current_user),
-    limit: int = 50,
-    offset: int = 0,
-    memory_type: Optional[str] = None,
-):
-    """获取记忆列表"""
+class ProfileUpdateRequest(BaseModel):
+    value: object  # str | list | dict
+
+
+class PreferenceCreateRequest(BaseModel):
+    key: str
+    value: object
+
+
+# ── Helpers ────────────────────────────────────────────────────────────
+
+def _get_nm():
+    from app.main import nm
+    return nm
+
+
+# ── Fixed-path endpoints (MUST be declared before /{memory_id}) ───────
+
+# -- Profile --
+
+@router.get("/profile")
+async def get_profile(current_user: User = Depends(get_current_user)):
+    """获取用户档案 (key_values namespace=profile)"""
     try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        # 获取记忆（通过时间范围）
-        end_time = datetime.now()
-        start_time = end_time - timedelta(days=365)  # 最近一年
-
-        memories = await nm.search(
-            user_id=user_id,
-            query="*",  # 获取所有
-            limit=limit + offset,
-            memory_type=memory_type,
-        )
-
-        # 简单分页
-        paginated = memories[offset : offset + limit]
-
-        return {
-            "memories": paginated,
-            "total": len(memories),
-            "limit": limit,
-            "offset": offset,
-        }
+        nm = _get_nm()
+        items = await nm.kv.list(current_user.id, "profile")
+        profile = {item.key: item.value for item in items}
+        return {"profile": profile}
     except Exception as e:
-        logger.error(f"获取记忆失败: {e}", exc_info=True)
+        logger.error(f"获取档案失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.put("/profile/{key}")
+async def update_profile_key(
+    key: str,
+    request: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """更新档案某个字段"""
+    try:
+        nm = _get_nm()
+        await nm.kv.set(current_user.id, "profile", key, request.value)
+        return {"success": True, "key": key}
+    except Exception as e:
+        logger.error(f"更新档案失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Preferences --
+
+@router.get("/preferences")
+async def get_preferences(current_user: User = Depends(get_current_user)):
+    """获取用户偏好列表"""
+    try:
+        nm = _get_nm()
+        items = await nm.kv.list(current_user.id, "preferences")
+        prefs = [
+            {"key": item.key, "value": item.value}
+            for item in items
+        ]
+        return {"preferences": prefs}
+    except Exception as e:
+        logger.error(f"获取偏好失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/preferences")
+async def create_preference(
+    request: PreferenceCreateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """创建/更新偏好"""
+    try:
+        nm = _get_nm()
+        await nm.kv.set(current_user.id, "preferences", request.key, request.value)
+        return {"success": True, "key": request.key}
+    except Exception as e:
+        logger.error(f"创建偏好失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/preferences/{key}")
+async def delete_preference(
+    key: str,
+    current_user: User = Depends(get_current_user),
+):
+    """删除偏好"""
+    try:
+        nm = _get_nm()
+        deleted = await nm.kv.delete(current_user.id, "preferences", key)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="偏好不存在")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除偏好失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Emotion --
+
+@router.get("/emotion")
+async def get_emotion(current_user: User = Depends(get_current_user)):
+    """获取情绪档案"""
+    try:
+        nm = _get_nm()
+        from neuromemory.models.emotion_profile import EmotionProfile
+        from sqlalchemy import select
+
+        async with nm._db.session() as session:
+            result = await session.execute(
+                select(EmotionProfile).where(
+                    EmotionProfile.user_id == current_user.id
+                )
+            )
+            profile = result.scalar_one_or_none()
+
+        if not profile:
+            return {"emotion": None}
+
+        return {
+            "emotion": {
+                "meso": {
+                    "state": profile.latest_state,
+                    "period": profile.latest_state_period,
+                    "valence": profile.latest_state_valence,
+                    "arousal": profile.latest_state_arousal,
+                    "updated_at": (
+                        profile.latest_state_updated_at.isoformat()
+                        if profile.latest_state_updated_at
+                        else None
+                    ),
+                },
+                "macro": {
+                    "valence_avg": profile.valence_avg,
+                    "arousal_avg": profile.arousal_avg,
+                    "dominant_emotions": profile.dominant_emotions,
+                    "emotion_triggers": profile.emotion_triggers,
+                },
+                "source_count": profile.source_count,
+            }
+        }
+    except Exception as e:
+        logger.error(f"获取情绪档案失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Graph --
+
+@router.get("/graph")
+async def get_knowledge_graph(
+    current_user: User = Depends(get_current_user),
+    limit: int = 200,
+):
+    """获取真实知识图谱 (graph_nodes + graph_edges)"""
+    try:
+        nm = _get_nm()
+        from neuromemory.models.graph import GraphNode, GraphEdge
+        from sqlalchemy import select
+
+        async with nm._db.session() as session:
+            # 查询节点
+            node_rows = (
+                await session.execute(
+                    select(GraphNode)
+                    .where(GraphNode.user_id == current_user.id)
+                    .limit(limit)
+                )
+            ).scalars().all()
+
+            # 查询边
+            edge_rows = (
+                await session.execute(
+                    select(GraphEdge)
+                    .where(GraphEdge.user_id == current_user.id)
+                    .limit(limit * 2)
+                )
+            ).scalars().all()
+
+        # 构建 Cytoscape elements
+        node_key_to_cy_id = {}
+        nodes = []
+        for n in node_rows:
+            cy_id = f"{n.node_type}:{n.node_id}"
+            node_key_to_cy_id[(n.node_type, n.node_id)] = cy_id
+            nodes.append({
+                "data": {
+                    "id": cy_id,
+                    "label": (n.properties or {}).get("name", n.node_id),
+                    "type": n.node_type.lower(),
+                    "node_type": n.node_type,
+                    "node_id": n.node_id,
+                    "properties": n.properties or {},
+                    "db_id": str(n.id),
+                }
+            })
+
+        edges = []
+        for e in edge_rows:
+            src = node_key_to_cy_id.get((e.source_type, e.source_id))
+            tgt = node_key_to_cy_id.get((e.target_type, e.target_id))
+            if src and tgt:
+                # 只展示 active 边 (没有 valid_until 或 valid_until 在未来)
+                props = e.properties or {}
+                valid_until = props.get("valid_until")
+                if valid_until:
+                    continue  # 已失效的边不展示
+                edges.append({
+                    "data": {
+                        "id": str(e.id),
+                        "source": src,
+                        "target": tgt,
+                        "label": e.edge_type,
+                        "edge_type": e.edge_type,
+                    }
+                })
+
+        return {
+            "elements": {"nodes": nodes, "edges": edges},
+            "total_nodes": len(nodes),
+            "total_edges": len(edges),
+        }
+    except Exception as e:
+        logger.error(f"获取知识图谱失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/graph/nodes/{node_type}/{node_id}")
+async def delete_graph_node(
+    node_type: str,
+    node_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """删除图谱节点（及其关联边）"""
+    try:
+        nm = _get_nm()
+        await nm.graph.delete_node(current_user.id, node_type, node_id)
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"删除节点失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/graph/edges/{edge_id}")
+async def delete_graph_edge(
+    edge_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """删除图谱边"""
+    try:
+        nm = _get_nm()
+        from neuromemory.models.graph import GraphEdge
+        from sqlalchemy import select
+        import uuid
+
+        async with nm._db.session() as session:
+            result = await session.execute(
+                select(GraphEdge).where(
+                    GraphEdge.id == uuid.UUID(edge_id),
+                    GraphEdge.user_id == current_user.id,
+                )
+            )
+            edge = result.scalar_one_or_none()
+            if not edge:
+                raise HTTPException(status_code=404, detail="边不存在")
+            await session.delete(edge)
+            await session.commit()
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除边失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Stats --
+
+@router.get("/stats")
+async def get_memory_stats(current_user: User = Depends(get_current_user)):
+    """获取记忆统计信息（真实查询）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+
+            # 总量
+            total, _ = await svc.list_all_memories(current_user.id, limit=0, offset=0)
+
+            # 按类型统计
+            by_type = {}
+            for mt in ["fact", "episodic", "insight", "general"]:
+                count, _ = await svc.list_all_memories(
+                    current_user.id, memory_type=mt, limit=0, offset=0
+                )
+                if count > 0:
+                    by_type[mt] = count
+
+        # 最近7天 — 使用顶层方法
+        recent = await nm.get_recent_memories(current_user.id, days=7)
+        recent_count = len(recent)
+
+        return {
+            "total": total,
+            "by_type": by_type,
+            "recent_7_days_total": recent_count,
+            "avg_per_day": round(recent_count / 7, 1) if recent_count > 0 else 0,
+        }
+    except Exception as e:
+        logger.error(f"获取统计信息失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Search --
+
+@router.post("/search")
+async def search_memories(
+    request: SearchRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """语义搜索记忆"""
+    try:
+        nm = _get_nm()
+        memories = await nm.search(
+            user_id=current_user.id,
+            query=request.query,
+            limit=request.limit,
+            memory_type=request.memory_type,
+        )
+        filtered = [m for m in memories if m.get("score", 0) >= request.threshold]
+        return {"memories": filtered, "query": request.query, "count": len(filtered)}
+    except Exception as e:
+        logger.error(f"搜索记忆失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -- Recent / Timeline --
+
 @router.get("/recent")
-async def get_recent_memories(
+async def get_recent_memories_endpoint(
     current_user: User = Depends(get_current_user),
     days: int = 30,
     limit: int = 100,
@@ -79,32 +382,25 @@ async def get_recent_memories(
 ):
     """获取最近的记忆"""
     try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        # NeuroMemory v2 的 search 会按相关度和时效性排序
-        memories = await nm.search(
-            user_id=user_id,
-            query="*",
-            limit=limit,
-            memory_type=memory_type,
+        nm = _get_nm()
+        types = [memory_type] if memory_type else None
+        mems = await nm.get_recent_memories(
+            current_user.id, days=days, memory_types=types, limit=limit
         )
 
-        # 过滤最近 N 天的记忆
-        cutoff = datetime.now() - timedelta(days=days)
-        recent = []
-        for m in memories:
-            created_at = m.get("created_at") or m.get("timestamp")
-            if created_at:
-                if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00")
-                    )
-                if created_at >= cutoff:
-                    recent.append(m)
+        memories = []
+        for m in mems:
+            memories.append({
+                "id": str(m.id),
+                "content": m.content,
+                "memory_type": m.memory_type or "general",
+                "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "metadata": m.metadata_ or {},
+                "access_count": m.access_count,
+            })
 
-        return {"memories": recent, "days": days}
+        return {"memories": memories, "days": days}
     except Exception as e:
         logger.error(f"获取最近记忆失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -118,247 +414,25 @@ async def get_timeline(
 ):
     """获取时间线"""
     try:
-        from app.main import nm
-        from collections import defaultdict
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
 
-        user_id = current_user.id
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+            result = await svc.get_memory_timeline(
+                current_user.id,
+                start_date=datetime.now() - timedelta(days=days),
+                end_date=datetime.now(),
+                granularity=granularity,
+            )
 
-        # 获取最近记忆
-        memories = await nm.search(user_id=user_id, query="*", limit=500)
-
-        # 过滤最近 N 天
-        cutoff = datetime.now() - timedelta(days=days)
-        recent = []
-        for m in memories:
-            created_at = m.get("created_at") or m.get("timestamp")
-            if created_at:
-                if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00")
-                    )
-                if created_at >= cutoff:
-                    m["_parsed_date"] = created_at
-                    recent.append(m)
-
-        # 按时间分组
-        timeline = defaultdict(list)
-        for m in recent:
-            date = m["_parsed_date"]
-            if granularity == "day":
-                key = date.strftime("%Y-%m-%d")
-            elif granularity == "week":
-                key = f"{date.year}-W{date.isocalendar()[1]}"
-            else:  # month
-                key = date.strftime("%Y-%m")
-
-            del m["_parsed_date"]
-            timeline[key].append(m)
-
-        # 转换为列表格式
-        timeline_list = [
-            {"date": date, "count": len(mems), "memories": mems}
-            for date, mems in sorted(timeline.items(), reverse=True)
-        ]
-
-        return {"timeline": timeline_list, "granularity": granularity}
+        return {"timeline": result.get("timeline", []), "granularity": granularity}
     except Exception as e:
         logger.error(f"获取时间线失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/graph")
-async def get_knowledge_graph(
-    current_user: User = Depends(get_current_user),
-    limit: int = 100,
-):
-    """获取知识图谱"""
-    try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        # 获取记忆
-        memories = await nm.search(user_id=user_id, query="*", limit=limit)
-
-        # 构建简单的图谱（基于关键词共现）
-        nodes = []
-        edges = []
-        keywords_map = {}
-
-        for memory in memories:
-            # 提取关键词（简单实现：从 metadata 或内容中提取）
-            keywords = []
-            if "metadata" in memory and isinstance(memory["metadata"], dict):
-                entities = memory["metadata"].get("entities", [])
-                if isinstance(entities, list):
-                    keywords = [e.get("name") for e in entities if "name" in e]
-
-            # 创建节点
-            for kw in keywords[:3]:  # 限制每个记忆最多 3 个关键词
-                if kw not in keywords_map:
-                    keywords_map[kw] = len(nodes)
-                    nodes.append(
-                        {
-                            "data": {
-                                "id": f"node_{len(nodes)}",
-                                "label": kw,
-                                "type": "entity",
-                                "count": 1,
-                            }
-                        }
-                    )
-                else:
-                    nodes[keywords_map[kw]]["data"]["count"] += 1
-
-            # 创建边（关键词之间的连接）
-            for i in range(len(keywords) - 1):
-                if keywords[i] in keywords_map and keywords[i + 1] in keywords_map:
-                    edges.append(
-                        {
-                            "data": {
-                                "source": f"node_{keywords_map[keywords[i]]}",
-                                "target": f"node_{keywords_map[keywords[i+1]]}",
-                            }
-                        }
-                    )
-
-        return {"elements": {"nodes": nodes, "edges": edges}}
-    except Exception as e:
-        logger.error(f"获取知识图谱失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/search")
-async def search_memories(
-    request: SearchRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """语义搜索记忆"""
-    try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        memories = await nm.search(
-            user_id=user_id,
-            query=request.query,
-            limit=request.limit,
-            memory_type=request.memory_type,
-        )
-
-        # 过滤低于阈值的结果
-        filtered = [m for m in memories if m.get("score", 0) >= request.threshold]
-
-        return {"memories": filtered, "query": request.query, "count": len(filtered)}
-    except Exception as e:
-        logger.error(f"搜索记忆失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/stats")
-async def get_memory_stats(
-    current_user: User = Depends(get_current_user),
-):
-    """获取记忆统计信息"""
-    try:
-        from app.main import nm
-        from collections import Counter
-
-        user_id = current_user.id
-
-        # 获取所有记忆
-        memories = await nm.search(user_id=user_id, query="*", limit=1000)
-
-        # 统计
-        total = len(memories)
-        by_type = Counter(m.get("memory_type", "unknown") for m in memories)
-
-        # 最近 7 天
-        cutoff = datetime.now() - timedelta(days=7)
-        recent_count = 0
-        for m in memories:
-            created_at = m.get("created_at") or m.get("timestamp")
-            if created_at:
-                if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00")
-                    )
-                if created_at >= cutoff:
-                    recent_count += 1
-
-        return {
-            "total": total,
-            "by_type": dict(by_type),
-            "recent_7_days_total": recent_count,
-            "avg_per_day": round(recent_count / 7, 1) if recent_count > 0 else 0,
-        }
-    except Exception as e:
-        logger.error(f"获取统计信息失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/{memory_id}")
-async def update_memory(
-    memory_id: str,
-    request: UpdateMemoryRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """更新记忆"""
-    try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        # NeuroMemory v2 不支持直接更新，需要标记删除并添加新记忆
-        # 这里简化实现：添加纠正记忆
-        correction_text = f"更新记忆 {memory_id}: "
-        if request.content:
-            correction_text += f"内容更改为: {request.content}"
-        if request.memory_type:
-            correction_text += f" 类型更改为: {request.memory_type}"
-
-        result = await nm.add(
-            user_id=user_id,
-            content=correction_text,
-            memory_type="correction",
-            metadata={
-                "is_deletion_marker": True,
-                "target_memory_id": memory_id,
-                "updated_content": request.content,
-                "updated_type": request.memory_type,
-            },
-        )
-
-        return {"success": True, "message": "记忆已更新", "correction_id": result.get("id")}
-    except Exception as e:
-        logger.error(f"更新记忆失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{memory_id}")
-async def delete_memory(
-    memory_id: str,
-    current_user: User = Depends(get_current_user),
-):
-    """删除记忆（标记删除）"""
-    try:
-        from app.main import nm
-
-        user_id = current_user.id
-
-        # NeuroMemory v2 不支持物理删除，使用标记删除
-        result = await nm.add(
-            user_id=user_id,
-            content=f"删除记忆: {memory_id}",
-            memory_type="correction",
-            metadata={"is_deletion_marker": True, "target_memory_id": memory_id},
-        )
-
-        return {"success": True, "message": "记忆已标记删除"}
-    except Exception as e:
-        logger.error(f"删除记忆失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
+# -- Correct --
 
 @router.post("/correct")
 async def conversational_correct(
@@ -367,13 +441,13 @@ async def conversational_correct(
 ):
     """对话式纠正"""
     try:
-        from app.main import nm
+        nm = _get_nm()
         from app.services.llm_client import LLMClient
+        import json
 
         user_id = current_user.id
         llm = LLMClient()
 
-        # 使用 LLM 理解纠正意图
         prompt = f"""用户说："{request.correction}"
 
 请分析这句话，提取以下信息（JSON 格式）：
@@ -386,13 +460,9 @@ async def conversational_correct(
 
         response = await llm.generate(prompt=prompt, temperature=0.3, max_tokens=200)
 
-        # 解析 LLM 响应
-        import json
-
         try:
             correction_info = json.loads(response.strip())
-        except:
-            # 如果解析失败，使用简单规则
+        except Exception:
             correction_info = {
                 "old_value": "",
                 "new_value": request.correction,
@@ -400,15 +470,13 @@ async def conversational_correct(
                 "search_query": request.correction,
             }
 
-        # 搜索相关记忆
         search_query = correction_info.get("search_query", request.correction)
         related = await nm.search(user_id=user_id, query=search_query, limit=10)
 
-        # 添加纠正记忆
-        await nm.add(
+        await nm.add_memory(
             user_id=user_id,
             content=request.correction,
-            memory_type="correction",
+            memory_type="fact",
             metadata={
                 "correction_info": correction_info,
                 "affected_memories": [m.get("id") for m in related[:5]],
@@ -426,6 +494,47 @@ async def conversational_correct(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Parameterized endpoints (/{memory_id}) ────────────────────────────
+
+@router.get("/")
+async def get_memories(
+    current_user: User = Depends(get_current_user),
+    limit: int = 50,
+    offset: int = 0,
+    memory_type: Optional[str] = None,
+):
+    """获取记忆列表（真实分页）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+            total, mems = await svc.list_all_memories(
+                current_user.id,
+                memory_type=memory_type,
+                limit=limit,
+                offset=offset,
+            )
+
+        items = []
+        for m in mems:
+            items.append({
+                "id": str(m.id),
+                "content": m.content,
+                "memory_type": m.memory_type or "general",
+                "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "metadata": m.metadata_ or {},
+                "access_count": m.access_count,
+            })
+
+        return {"total": total, "items": items, "limit": limit, "offset": offset}
+    except Exception as e:
+        logger.error(f"获取记忆失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{memory_id}")
 async def get_memory(
     memory_id: str,
@@ -433,23 +542,85 @@ async def get_memory(
 ):
     """获取单个记忆详情"""
     try:
-        from app.main import nm
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
 
-        user_id = current_user.id
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+            m = await svc.get_memory_by_id(memory_id, current_user.id)
 
-        # 通过 ID 搜索
-        memories = await nm.search(
-            user_id=user_id, query=memory_id, limit=100
-        )
+        if not m:
+            raise HTTPException(status_code=404, detail="记忆不存在")
 
-        # 查找匹配的记忆
-        for memory in memories:
-            if memory.get("id") == memory_id:
-                return memory
-
-        raise HTTPException(status_code=404, detail="记忆不存在")
+        return {
+            "id": str(m.id),
+            "content": m.content,
+            "memory_type": m.memory_type or "general",
+            "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+            "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+            "metadata": m.metadata_ or {},
+            "access_count": m.access_count,
+            "last_accessed_at": m.last_accessed_at.isoformat() if m.last_accessed_at else None,
+            "user_id": m.user_id,
+        }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取记忆详情失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{memory_id}")
+async def update_memory(
+    memory_id: str,
+    request: UpdateMemoryRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """更新记忆（真实更新）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session, embedding=nm._embedding)
+            updated = await svc.update_memory(
+                memory_id=memory_id,
+                user_id=current_user.id,
+                content=request.content,
+                memory_type=request.memory_type,
+            )
+
+        if not updated:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+
+        return {"success": True, "message": "记忆已更新", "id": str(updated.id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新记忆失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{memory_id}")
+async def delete_memory(
+    memory_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """删除记忆（物理删除）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+            deleted = await svc.delete_memory(memory_id, current_user.id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+
+        return {"success": True, "message": "记忆已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除记忆失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,12 +1,4 @@
-"""Me2 Providers"""
+"""Me2 Providers — 已迁移至 NeuroMemory 内置 Provider"""
 
-try:
-    from .local_embedding import LocalEmbedding
-    __all__ = ["LocalEmbedding"]
-except ImportError:
-    # sentence-transformers 未安装
-    __all__ = []
-
-# OpenAI Embedding 总是可用（不依赖 torch）
-from .openai_embedding import OpenAIEmbedding
-__all__.append("OpenAIEmbedding")
+# 所有 Embedding Provider 现在直接从 neuromemory 导入:
+# from neuromemory import SiliconFlowEmbedding, OpenAIEmbedding, SentenceTransformerEmbedding
