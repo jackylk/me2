@@ -4,7 +4,8 @@ Me2 FastAPI 主应用
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.db.database import init_db, close_db
+from app.db.database import init_db, close_db, engine
+from sqlalchemy import text
 import logging
 
 # 配置日志
@@ -44,6 +45,18 @@ async def lifespan(app: FastAPI):
     # 1. 初始化数据库（Me2 用户表）
     logger.info("📦 初始化数据库...")
     await init_db()
+
+    # 1.5 一次性迁移：DROP neuromemory 旧表，让 nm.init() 重建正确 schema
+    # TODO: 部署成功后删除这段代码
+    logger.info("🔄 DROP neuromemory 旧表以重建 schema...")
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS embeddings CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS conversations CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS conversation_sessions CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS kv_store CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS graph_edges CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS documents CASCADE"))
+    logger.info("✅ 旧表已清除")
 
     # 2. 初始化 NeuroMemory
     logger.info("🧠 初始化 NeuroMemory...")
