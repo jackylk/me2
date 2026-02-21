@@ -15,7 +15,7 @@ boto3>=1.34.0  # neuromemory S3 storage dependency
 email-validator>=2.0.0  # neuromemory pydantic email fields
 
 # LLM
-openai==1.10.0  # DeepSeek 使用 OpenAI 兼容接口
+openai>=1.50.0  # DeepSeek 使用 OpenAI 兼容接口
 httpx>=0.26.0
 
 # Embedding (本地模型，可选 - 不安装则自动使用远程 API)
