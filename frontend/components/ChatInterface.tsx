@@ -268,7 +268,7 @@ export default function ChatInterface({
                       )}
                     </div>
                     {/* Memory recall indicator - expandable */}
-                    {message.role === 'assistant' && message.memories_recalled && message.memories_recalled > 0 && (
+                    {message.role === 'assistant' && !!message.memories_recalled && message.memories_recalled > 0 && (
                       <MemoryRecallTag
                         count={message.memories_recalled}
                         summaries={message.recalled_summaries}
