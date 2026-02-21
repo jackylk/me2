@@ -82,13 +82,25 @@ class ConversationEngine:
             # 🚀 使用 asyncio.gather 并发执行，减少等待时间
             # NeuroMemory 内部会缓存 query embedding，避免重复计算
             step_start = time.time()
-            recall_task = nm.recall(user_id=user_id, query=message, limit=5)
+            recall_task = nm.recall(user_id=user_id, query=message, limit=10)
             insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
+            # 额外搜索情节记忆，确保时间信息不丢失
+            episodic_task = nm.search(user_id=user_id, query=message, memory_type="episodic", limit=5)
 
-            recall_result, insights = await asyncio.gather(recall_task, insights_task)
+            recall_result, insights, episodic_extra = await asyncio.gather(
+                recall_task, insights_task, episodic_task
+            )
             memories = recall_result["merged"]
             graph_context = recall_result.get("graph_context", [])
             user_profile = recall_result.get("user_profile", {})
+
+            # 合并情节记忆（去重），确保时间相关信息被包含
+            if episodic_extra:
+                existing_contents = {m.get("content", "") for m in memories}
+                for ep in episodic_extra:
+                    if ep.get("content", "") not in existing_contents:
+                        existing_contents.add(ep["content"])
+                        memories.append(ep)
 
             timings['recall_memories'] = time.time() - step_start
             logger.info(f"召回 {len(memories)} 条记忆 + {len(insights)} 条洞察 + {len(graph_context)} 条图谱（并发执行）")
@@ -260,9 +272,22 @@ class ConversationEngine:
                 elif valence > 0.3:
                     emotion_hint = " [正面情绪]"
 
+            # 提取时间信息
+            time_hint = ""
+            ts = m.get("extracted_timestamp") or m.get("created_at")
+            if ts:
+                if hasattr(ts, "strftime"):
+                    time_hint = f" [{ts.strftime('%Y-%m-%d')}]"
+                elif isinstance(ts, str) and len(ts) >= 10:
+                    time_hint = f" [{ts[:10]}]"
+
+            # 记忆类型标记
+            memory_type = m.get("memory_type", "")
+            type_hint = f"[{memory_type}]" if memory_type else ""
+
             score = m.get("score", 0)
             memory_lines.append(
-                f"- {m['content']} (相关度: {score:.2f}){emotion_hint}"
+                f"- {type_hint}{time_hint} {m['content']} (相关度: {score:.2f}){emotion_hint}"
             )
 
         memory_context = "\n".join(memory_lines) if memory_lines else "暂无相关记忆"
@@ -403,13 +428,25 @@ class ConversationEngine:
             # 🚀 并发召回记忆和获取洞察
             step_start = time.time()
             try:
-                recall_task = nm.recall(user_id=user_id, query=message, limit=5)
+                recall_task = nm.recall(user_id=user_id, query=message, limit=10)
                 insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
+                # 额外搜索情节记忆，确保时间信息不丢失
+                episodic_task = nm.search(user_id=user_id, query=message, memory_type="episodic", limit=5)
 
-                recall_result, insights = await asyncio.gather(recall_task, insights_task)
+                recall_result, insights, episodic_extra = await asyncio.gather(
+                    recall_task, insights_task, episodic_task
+                )
                 memories = recall_result["merged"]
                 graph_context = recall_result.get("graph_context", [])
                 user_profile = recall_result.get("user_profile", {})
+
+                # 合并情节记忆（去重），确保时间相关信息被包含
+                if episodic_extra:
+                    existing_contents = {m.get("content", "") for m in memories}
+                    for ep in episodic_extra:
+                        if ep.get("content", "") not in existing_contents:
+                            existing_contents.add(ep["content"])
+                            memories.append(ep)
             except Exception as e:
                 logger.warning(f"记忆召回/洞察搜索失败: {e}")
                 memories = []
