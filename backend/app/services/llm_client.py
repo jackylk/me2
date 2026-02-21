@@ -96,6 +96,8 @@ class LLMClient:
                 async def stream_generator():
                     full_response = ""
                     async for chunk in await self.client.chat.completions.create(**kwargs):
+                        if not chunk.choices:
+                            continue
                         if chunk.choices[0].delta.content:
                             content = chunk.choices[0].delta.content
                             full_response += content
