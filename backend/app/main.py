@@ -19,12 +19,14 @@ from neuromemory import (
     SiliconFlowEmbedding, OpenAIEmbedding,
 )
 
-from neuromemory import SentenceTransformerEmbedding
-
-if SentenceTransformerEmbedding is not None:
-    USE_LOCAL_EMBEDDING = True
-else:
+try:
+    from neuromemory import SentenceTransformerEmbedding
+    USE_LOCAL_EMBEDDING = SentenceTransformerEmbedding is not None
+except ImportError:
+    SentenceTransformerEmbedding = None
     USE_LOCAL_EMBEDDING = False
+
+if not USE_LOCAL_EMBEDDING:
     logger.warning("⚠️  sentence-transformers 未安装，使用远程 Embedding API")
 
 # 全局 NeuroMemory 实例
