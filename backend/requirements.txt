@@ -9,10 +9,8 @@ sqlalchemy==2.0.25
 asyncpg==0.29.0
 alembic==1.13.1
 
-# NeuroMemory (本地安装)
-# pip install -e ../NeuroMemory
-# 或者等 NeuroMemory 发布到 PyPI 后：
-# neuromemory>=2.0.0
+# NeuroMemory
+neuromemory>=0.3.0
 
 # LLM
 openai==1.10.0  # DeepSeek 使用 OpenAI 兼容接口

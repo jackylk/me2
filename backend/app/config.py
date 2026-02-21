@@ -2,6 +2,7 @@
 配置管理模块
 """
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import List
 import os
 from pathlib import Path
@@ -17,7 +18,18 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
 
     # Database (Me2 用户表 + NeuroMemory 共用)
+    # Railway 提供 postgresql://... 格式，需要转为 postgresql+asyncpg://...
     DATABASE_URL: str = "postgresql+asyncpg://me2_user:me2_secure_password_2026@localhost:5434/me2db"
+
+    @model_validator(mode="after")
+    def fix_database_url(self):
+        """Railway 的 DATABASE_URL 是 postgresql://，需要转为 asyncpg 驱动"""
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            self.DATABASE_URL = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        return self
 
     # JWT 认证
     JWT_SECRET: str = "change-me-in-production-use-random-string"
