@@ -36,22 +36,12 @@ export function formatDate(date: string | Date): string {
  */
 export function getMemoryTypeColor(
   type: string
-): 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'gray' | 'red' | 'indigo' {
-  const colors: Record<
-    string,
-    'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'gray' | 'red' | 'indigo'
-  > = {
+): 'blue' | 'green' | 'orange' | 'gray' {
+  const colors: Record<string, 'blue' | 'green' | 'orange' | 'gray'> = {
     fact: 'blue',
-    event: 'green',
-    preference: 'purple',
-    relationship: 'pink',
-    knowledge: 'orange',
-    insight: 'purple',
     episodic: 'green',
-    relation: 'pink',
+    insight: 'orange',
     general: 'gray',
-    correction: 'red',
-    image: 'indigo',
   };
   return colors[type] || 'gray';
 }
@@ -62,16 +52,9 @@ export function getMemoryTypeColor(
 export function getMemoryTypeName(type: string): string {
   const names: Record<string, string> = {
     fact: '事实',
-    event: '事件',
-    preference: '偏好',
-    relationship: '关系',
-    knowledge: '知识',
-    insight: '洞察',
     episodic: '情节',
-    relation: '关系',
+    insight: '洞察',
     general: '通用',
-    correction: '纠正',
-    image: '图片',
   };
   return names[type] || type;
 }

@@ -13,11 +13,21 @@ interface MemoryGraphProps {
     edges: Array<{ data: any }>;
   };
   onNodeClick?: (nodeData: any) => void;
+  nodeColors?: Record<string, string>;
 }
+
+const DEFAULT_COLORS: Record<string, string> = {
+  keyword: '#3B82F6',
+  person: '#EC4899',
+  place: '#10B981',
+  event: '#F59E0B',
+  unknown: '#6B7280',
+};
 
 export default function MemoryGraph({
   elements,
   onNodeClick,
+  nodeColors,
 }: MemoryGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<any>(null);
@@ -62,14 +72,8 @@ export default function MemoryGraph({
           style: {
             'background-color': (ele: any) => {
               const type = ele.data('type');
-              const colors: Record<string, string> = {
-                keyword: '#3B82F6',
-                person: '#EC4899',
-                place: '#10B981',
-                event: '#F59E0B',
-                unknown: '#6B7280',
-              };
-              return colors[type] || colors.unknown;
+              const colors = nodeColors || DEFAULT_COLORS;
+              return colors[type] || colors.unknown || '#6B7280';
             },
             label: 'data(label)',
             'text-valign': 'center',
@@ -152,15 +156,9 @@ export default function MemoryGraph({
 
     cyRef.current.on('mouseout', 'node', (event: any) => {
       const type = event.target.data('type');
-      const colors: Record<string, string> = {
-        keyword: '#3B82F6',
-        person: '#EC4899',
-        place: '#10B981',
-        event: '#F59E0B',
-        unknown: '#6B7280',
-      };
+      const colors = nodeColors || DEFAULT_COLORS;
       event.target.style({
-        'background-color': colors[type] || colors.unknown,
+        'background-color': colors[type] || colors.unknown || '#6B7280',
       });
     });
 
@@ -169,7 +167,7 @@ export default function MemoryGraph({
         cyRef.current.destroy();
       }
     };
-  }, [elements, isLoading, onNodeClick]);
+  }, [elements, isLoading, onNodeClick, nodeColors]);
 
   const handleZoomIn = () => {
     if (cyRef.current) {
@@ -267,28 +265,28 @@ export default function MemoryGraph({
         </button>
       </div>
 
-      {/* 图例 */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-3">
-        <div className="text-xs font-semibold text-gray-700 mb-2">节点类型</div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-xs text-gray-600">关键词</span>
+      {/* 图例 — 从实际节点类型动态生成 */}
+      {(() => {
+        const colors = nodeColors || DEFAULT_COLORS;
+        const types = Array.from(new Set(elements.nodes.map((n) => n.data.type)));
+        if (types.length === 0) return null;
+        return (
+          <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-3">
+            <div className="text-xs font-semibold text-gray-700 mb-2">节点类型</div>
+            <div className="space-y-1">
+              {types.map((type) => (
+                <div key={type} className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: colors[type] || '#6B7280' }}
+                  />
+                  <span className="text-xs text-gray-600">{type}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-            <span className="text-xs text-gray-600">人物</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-xs text-gray-600">地点</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span className="text-xs text-gray-600">事件</span>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* 统计信息 */}
       {elements.nodes.length > 0 && (

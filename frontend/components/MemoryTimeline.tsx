@@ -76,11 +76,9 @@ export default function MemoryTimeline({
   const getTypeName = (type: string) => {
     const names: Record<string, string> = {
       fact: '事实',
-      event: '事件',
-      preference: '偏好',
-      relationship: '关系',
-      knowledge: '知识',
-      correction: '纠正',
+      episodic: '情节',
+      insight: '洞察',
+      general: '通用',
     };
     return names[type] || type;
   };
@@ -88,11 +86,9 @@ export default function MemoryTimeline({
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       fact: 'text-blue-600',
-      event: 'text-green-600',
-      preference: 'text-purple-600',
-      relationship: 'text-pink-600',
-      knowledge: 'text-yellow-600',
-      correction: 'text-red-600',
+      episodic: 'text-green-600',
+      insight: 'text-orange-600',
+      general: 'text-gray-600',
     };
     return colors[type] || 'text-gray-600';
   };

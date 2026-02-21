@@ -301,13 +301,8 @@ export default function MemoryDetailPage({ params }: PageProps) {
                   >
                     <option value="general">通用</option>
                     <option value="fact">事实</option>
-                    <option value="event">事件</option>
-                    <option value="preference">偏好</option>
-                    <option value="relationship">关系</option>
-                    <option value="knowledge">知识</option>
-                    <option value="insight">洞察</option>
                     <option value="episodic">情节</option>
-                    <option value="image">图片</option>
+                    <option value="insight">洞察</option>
                   </select>
                 </div>
                 <div>
