@@ -5,8 +5,8 @@ pydantic==2.5.3
 pydantic-settings==2.1.0
 
 # Database
-sqlalchemy==2.0.25
-asyncpg==0.29.0
+sqlalchemy>=2.0.25
+asyncpg>=0.30.0
 alembic==1.13.1
 
 # NeuroMemory
@@ -14,7 +14,7 @@ neuromemory>=0.3.0
 
 # LLM
 openai==1.10.0  # DeepSeek 使用 OpenAI 兼容接口
-httpx==0.26.0
+httpx>=0.26.0
 
 # Embedding (本地模型，可选 - 不安装则自动使用远程 API)
 # sentence-transformers==2.3.1
