@@ -149,11 +149,11 @@ export default function ImagesPage() {
         </div>
 
         {/* 上传区域 */}
-        {showUpload && (
+        {showUpload && userId && (
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">上传新图片</h2>
             <ImageUpload
-              userId={userId}
+              userId={userId!}
               onUploadSuccess={handleUploadSuccess}
               onUploadError={handleUploadError}
             />

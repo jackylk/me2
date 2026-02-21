@@ -14,6 +14,8 @@ interface ProfileData {
   response_length: string;
   confidence: number;
   sample_count: number;
+  decision_patterns?: any[];
+  value_priorities?: any[];
 }
 
 export default function ProfilePage() {

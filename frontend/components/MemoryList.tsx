@@ -84,12 +84,9 @@ export default function MemoryList({
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       fact: 'bg-blue-100 text-blue-800',
-      event: 'bg-green-100 text-green-800',
-      preference: 'bg-purple-100 text-purple-800',
-      relationship: 'bg-pink-100 text-pink-800',
-      knowledge: 'bg-yellow-100 text-yellow-800',
-      correction: 'bg-red-100 text-red-800',
-      image: 'bg-indigo-100 text-indigo-800',
+      episodic: 'bg-green-100 text-green-800',
+      insight: 'bg-orange-100 text-orange-800',
+      general: 'bg-gray-100 text-gray-800',
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
@@ -97,12 +94,9 @@ export default function MemoryList({
   const getTypeName = (type: string) => {
     const names: Record<string, string> = {
       fact: '事实',
-      event: '事件',
-      preference: '偏好',
-      relationship: '关系',
-      knowledge: '知识',
-      correction: '纠正',
-      image: '图片',
+      episodic: '情节',
+      insight: '洞察',
+      general: '通用',
     };
     return names[type] || type;
   };
@@ -211,7 +205,7 @@ export default function MemoryList({
                       className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(memory.metadata.image_url, '_blank');
+                        window.open(memory.metadata?.image_url, '_blank');
                       }}
                     />
                   </div>
