@@ -82,7 +82,7 @@ class ConversationEngine:
             # 🚀 使用 asyncio.gather 并发执行，减少等待时间
             # NeuroMemory 内部会缓存 query embedding，避免重复计算
             step_start = time.time()
-            recall_task = nm.recall(user_id=user_id, query=message, limit=10)
+            recall_task = nm.recall(user_id=user_id, query=message, limit=20)
             insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
             # 额外搜索情节记忆，确保时间信息不丢失
             episodic_task = nm.search(user_id=user_id, query=message, memory_type="episodic", limit=5)
@@ -428,7 +428,7 @@ class ConversationEngine:
             # 🚀 并发召回记忆和获取洞察
             step_start = time.time()
             try:
-                recall_task = nm.recall(user_id=user_id, query=message, limit=10)
+                recall_task = nm.recall(user_id=user_id, query=message, limit=20)
                 insights_task = nm.search(user_id=user_id, query=message, memory_type="insight", limit=3)
                 # 额外搜索情节记忆，确保时间信息不丢失
                 episodic_task = nm.search(user_id=user_id, query=message, memory_type="episodic", limit=5)
