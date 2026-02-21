@@ -15,6 +15,7 @@ import {
   Image,
   LogOut,
   X,
+  Settings,
 } from 'lucide-react';
 
 export default function MobileNav() {
@@ -35,6 +36,7 @@ export default function MobileNav() {
     { href: '/proactive', icon: Bell, label: '关心' },
     { href: '/analysis', icon: Brain, label: '分析' },
     { href: '/images', icon: Image, label: '图片' },
+    { href: '/settings', icon: Settings, label: '设置' },
   ];
 
   return (
