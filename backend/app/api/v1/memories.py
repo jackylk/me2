@@ -308,6 +308,114 @@ async def delete_graph_edge(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# -- Delete All --
+
+@router.delete("/all")
+async def delete_all_memories(
+    memory_type: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+):
+    """清除所有记忆（可按类型过滤）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+        from neuromemory.models.graph import GraphEdge
+        from sqlalchemy import delete
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+            deleted_count = await svc.delete_all_memories(
+                current_user.id, memory_type=memory_type
+            )
+
+            # 同时清除关联的 graph edges
+            if not memory_type:
+                edge_stmt = delete(GraphEdge).where(
+                    GraphEdge.user_id == current_user.id
+                )
+                await session.execute(edge_stmt)
+
+            await session.commit()
+
+        return {"success": True, "deleted_count": deleted_count}
+    except Exception as e:
+        logger.error(f"清除所有记忆失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/reset-all")
+async def reset_all_user_data(
+    current_user: User = Depends(get_current_user),
+):
+    """清除用户所有 AI 记忆数据（记忆、图谱、情绪、档案、偏好）"""
+    try:
+        nm = _get_nm()
+        from neuromemory.services.memory import MemoryService
+        from neuromemory.models.graph import GraphNode, GraphEdge
+        from neuromemory.models.emotion_profile import EmotionProfile
+        from sqlalchemy import delete
+
+        deleted_memories = 0
+        deleted_nodes = 0
+        deleted_edges = 0
+        deleted_emotion = False
+
+        async with nm._db.session() as session:
+            svc = MemoryService(session)
+
+            # 1. 清除所有记忆条目
+            deleted_memories = await svc.delete_all_memories(current_user.id)
+
+            # 2. 清除图谱节点
+            node_result = await session.execute(
+                delete(GraphNode).where(GraphNode.user_id == current_user.id)
+            )
+            deleted_nodes = node_result.rowcount
+
+            # 3. 清除图谱边
+            edge_result = await session.execute(
+                delete(GraphEdge).where(GraphEdge.user_id == current_user.id)
+            )
+            deleted_edges = edge_result.rowcount
+
+            # 4. 清除情绪档案
+            emotion_result = await session.execute(
+                delete(EmotionProfile).where(EmotionProfile.user_id == current_user.id)
+            )
+            deleted_emotion = emotion_result.rowcount > 0
+
+            await session.commit()
+
+        # 5. 清除 Profile KV
+        try:
+            profile_items = await nm.kv.list(current_user.id, "profile")
+            for item in profile_items:
+                await nm.kv.delete(current_user.id, "profile", item.key)
+        except Exception as e:
+            logger.warning(f"清除 profile KV 失败: {e}")
+
+        # 6. 清除 Preferences KV
+        try:
+            pref_items = await nm.kv.list(current_user.id, "preferences")
+            for item in pref_items:
+                await nm.kv.delete(current_user.id, "preferences", item.key)
+        except Exception as e:
+            logger.warning(f"清除 preferences KV 失败: {e}")
+
+        return {
+            "success": True,
+            "deleted": {
+                "memories": deleted_memories,
+                "graph_nodes": deleted_nodes,
+                "graph_edges": deleted_edges,
+                "emotion_profile": deleted_emotion,
+            },
+        }
+    except Exception as e:
+        logger.error(f"重置所有数据失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # -- Stats --
 
 @router.get("/stats")
