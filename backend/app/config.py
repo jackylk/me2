@@ -2,7 +2,7 @@
 配置管理模块
 """
 from pydantic_settings import BaseSettings
-from pydantic import model_validator
+from pydantic import model_validator, field_validator
 from typing import List
 import os
 from pathlib import Path
@@ -61,6 +61,13 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3333", "http://127.0.0.1:3333"]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
 
     # 主动关心
     PROACTIVE_CHECK_INTERVAL: int = 3600  # 每小时检查一次（未来功能）
