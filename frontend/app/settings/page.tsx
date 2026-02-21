@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
@@ -18,6 +18,25 @@ export default function SettingsPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showModal && !resetting) {
+        setShowModal(false);
+        setErrorMsg('');
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showModal, resetting]);
+
   const handleReset = async () => {
     setResetting(true);
     setErrorMsg('');
@@ -29,7 +48,8 @@ export default function SettingsPage() {
       if (response.ok) {
         setShowModal(false);
         setSuccessMsg('所有 AI 记忆数据已清除');
-        setTimeout(() => setSuccessMsg(''), 4000);
+        if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        successTimerRef.current = setTimeout(() => setSuccessMsg(''), 4000);
       } else {
         const data = await response.json().catch(() => ({}));
         setErrorMsg(data.detail || '清除失败，请重试');
@@ -78,13 +98,22 @@ export default function SettingsPage() {
 
         {/* 确认 Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => { if (!resetting) { setShowModal(false); setErrorMsg(''); } }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="reset-dialog-title"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
-                <h3 className="text-base font-semibold dark:text-white">确认重置</h3>
+                <h3 id="reset-dialog-title" className="text-base font-semibold dark:text-white">确认重置</h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 此操作将永久删除你的所有 AI 记忆数据：
