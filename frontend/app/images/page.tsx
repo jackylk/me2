@@ -26,7 +26,7 @@ export default function ImagesPage() {
 
   useEffect(() => {
     if (userId) {
-      loadImages(userId);
+      if (userId) loadImages(userId);
     }
   }, [userId]);
 
@@ -52,7 +52,7 @@ export default function ImagesPage() {
     console.log('上传成功:', data);
     setShowUpload(false);
     // 重新加载图片列表
-    loadImages(userId);
+    if (userId) loadImages(userId);
   };
 
   const handleUploadError = (error: string) => {
@@ -60,6 +60,7 @@ export default function ImagesPage() {
   };
 
   const handleDelete = async (memoryId: string) => {
+    if (!userId) return;
     // 找到对应的图片
     const image = images.find((img) => img.memory_id === memoryId);
     if (!image) return;
@@ -76,7 +77,7 @@ export default function ImagesPage() {
 
       if (response.ok) {
         // 重新加载图片列表
-        loadImages(userId);
+        if (userId) loadImages(userId);
       } else {
         const errorData = await response.json();
         alert(`删除失败: ${errorData.detail || '未知错误'}`);
@@ -88,6 +89,7 @@ export default function ImagesPage() {
   };
 
   const handleAddCaption = async (memoryId: string, caption: string) => {
+    if (!userId) return;
     try {
       const formData = new FormData();
       formData.append('memory_id', memoryId);
@@ -104,7 +106,7 @@ export default function ImagesPage() {
       if (response.ok) {
         alert('说明添加成功');
         // 重新加载图片列表
-        loadImages(userId);
+        if (userId) loadImages(userId);
       } else {
         const errorData = await response.json();
         alert(`添加失败: ${errorData.detail || '未知错误'}`);
