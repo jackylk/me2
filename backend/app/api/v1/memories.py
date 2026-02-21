@@ -150,31 +150,31 @@ async def get_emotion(current_user: User = Depends(get_current_user)):
             )
             profile = result.scalar_one_or_none()
 
-        if not profile:
-            return {"emotion": None}
+            if not profile:
+                return {"emotion": None}
 
-        return {
-            "emotion": {
-                "meso": {
-                    "state": profile.latest_state,
-                    "period": profile.latest_state_period,
-                    "valence": profile.latest_state_valence,
-                    "arousal": profile.latest_state_arousal,
-                    "updated_at": (
-                        profile.latest_state_updated_at.isoformat()
-                        if profile.latest_state_updated_at
-                        else None
-                    ),
-                },
-                "macro": {
-                    "valence_avg": profile.valence_avg,
-                    "arousal_avg": profile.arousal_avg,
-                    "dominant_emotions": profile.dominant_emotions,
-                    "emotion_triggers": profile.emotion_triggers,
-                },
-                "source_count": profile.source_count,
+            return {
+                "emotion": {
+                    "meso": {
+                        "state": profile.latest_state,
+                        "period": profile.latest_state_period,
+                        "valence": profile.latest_state_valence,
+                        "arousal": profile.latest_state_arousal,
+                        "updated_at": (
+                            profile.latest_state_updated_at.isoformat()
+                            if profile.latest_state_updated_at
+                            else None
+                        ),
+                    },
+                    "macro": {
+                        "valence_avg": profile.valence_avg,
+                        "arousal_avg": profile.arousal_avg,
+                        "dominant_emotions": profile.dominant_emotions,
+                        "emotion_triggers": profile.emotion_triggers,
+                    },
+                    "source_count": profile.source_count,
+                }
             }
-        }
     except Exception as e:
         logger.error(f"获取情绪档案失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -212,43 +212,42 @@ async def get_knowledge_graph(
                 )
             ).scalars().all()
 
-        # 构建 Cytoscape elements
-        node_key_to_cy_id = {}
-        nodes = []
-        for n in node_rows:
-            cy_id = f"{n.node_type}:{n.node_id}"
-            node_key_to_cy_id[(n.node_type, n.node_id)] = cy_id
-            nodes.append({
-                "data": {
-                    "id": cy_id,
-                    "label": (n.properties or {}).get("name", n.node_id),
-                    "type": n.node_type.lower(),
-                    "node_type": n.node_type,
-                    "node_id": n.node_id,
-                    "properties": n.properties or {},
-                    "db_id": str(n.id),
-                }
-            })
-
-        edges = []
-        for e in edge_rows:
-            src = node_key_to_cy_id.get((e.source_type, e.source_id))
-            tgt = node_key_to_cy_id.get((e.target_type, e.target_id))
-            if src and tgt:
-                # 只展示 active 边 (没有 valid_until 或 valid_until 在未来)
-                props = e.properties or {}
-                valid_until = props.get("valid_until")
-                if valid_until:
-                    continue  # 已失效的边不展示
-                edges.append({
+            # 在 session 内序列化，避免 lazy loading 失败
+            node_key_to_cy_id = {}
+            nodes = []
+            for n in node_rows:
+                cy_id = f"{n.node_type}:{n.node_id}"
+                node_key_to_cy_id[(n.node_type, n.node_id)] = cy_id
+                nodes.append({
                     "data": {
-                        "id": str(e.id),
-                        "source": src,
-                        "target": tgt,
-                        "label": e.edge_type,
-                        "edge_type": e.edge_type,
+                        "id": cy_id,
+                        "label": (n.properties or {}).get("name", n.node_id),
+                        "type": n.node_type.lower(),
+                        "node_type": n.node_type,
+                        "node_id": n.node_id,
+                        "properties": n.properties or {},
+                        "db_id": str(n.id),
                     }
                 })
+
+            edges = []
+            for e in edge_rows:
+                src = node_key_to_cy_id.get((e.source_type, e.source_id))
+                tgt = node_key_to_cy_id.get((e.target_type, e.target_id))
+                if src and tgt:
+                    props = e.properties or {}
+                    valid_until = props.get("valid_until")
+                    if valid_until:
+                        continue
+                    edges.append({
+                        "data": {
+                            "id": str(e.id),
+                            "source": src,
+                            "target": tgt,
+                            "label": e.edge_type,
+                            "edge_type": e.edge_type,
+                        }
+                    })
 
         return {
             "elements": {"nodes": nodes, "edges": edges},
@@ -517,17 +516,18 @@ async def get_memories(
                 offset=offset,
             )
 
-        items = []
-        for m in mems:
-            items.append({
-                "id": str(m.id),
-                "content": m.content,
-                "memory_type": m.memory_type or "general",
-                "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
-                "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
-                "metadata": m.metadata_ or {},
-                "access_count": m.access_count,
-            })
+            # 在 session 内序列化，避免 lazy loading 失败
+            items = []
+            for m in mems:
+                items.append({
+                    "id": str(m.id),
+                    "content": m.content,
+                    "memory_type": m.memory_type or "general",
+                    "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                    "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                    "metadata": m.metadata_ or {},
+                    "access_count": m.access_count,
+                })
 
         return {"total": total, "items": items, "limit": limit, "offset": offset}
     except Exception as e:
@@ -549,20 +549,20 @@ async def get_memory(
             svc = MemoryService(session)
             m = await svc.get_memory_by_id(memory_id, current_user.id)
 
-        if not m:
-            raise HTTPException(status_code=404, detail="记忆不存在")
+            if not m:
+                raise HTTPException(status_code=404, detail="记忆不存在")
 
-        return {
-            "id": str(m.id),
-            "content": m.content,
-            "memory_type": m.memory_type or "general",
-            "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
-            "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
-            "metadata": m.metadata_ or {},
-            "access_count": m.access_count,
-            "last_accessed_at": m.last_accessed_at.isoformat() if m.last_accessed_at else None,
-            "user_id": m.user_id,
-        }
+            return {
+                "id": str(m.id),
+                "content": m.content,
+                "memory_type": m.memory_type or "general",
+                "timestamp": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "created_at": m.extracted_timestamp.isoformat() if m.extracted_timestamp else None,
+                "metadata": m.metadata_ or {},
+                "access_count": m.access_count,
+                "last_accessed_at": m.last_accessed_at.isoformat() if m.last_accessed_at else None,
+                "user_id": m.user_id,
+            }
     except HTTPException:
         raise
     except Exception as e:
@@ -590,10 +590,10 @@ async def update_memory(
                 memory_type=request.memory_type,
             )
 
-        if not updated:
-            raise HTTPException(status_code=404, detail="记忆不存在")
+            if not updated:
+                raise HTTPException(status_code=404, detail="记忆不存在")
 
-        return {"success": True, "message": "记忆已更新", "id": str(updated.id)}
+            return {"success": True, "message": "记忆已更新", "id": str(updated.id)}
     except HTTPException:
         raise
     except Exception as e:
