@@ -18,9 +18,10 @@ alembic==1.13.1
 openai==1.10.0  # DeepSeek 使用 OpenAI 兼容接口
 httpx==0.26.0
 
-# Embedding (本地模型)
-sentence-transformers==2.3.1
-torch>=2.0.0  # sentence-transformers 依赖
+# Embedding (本地模型，可选 - 不安装则自动使用远程 API)
+# sentence-transformers==2.3.1
+# torch>=2.0.0
+# 如需本地 embedding，手动安装: pip install sentence-transformers torch
 
 # 认证
 python-jose[cryptography]==3.3.0

@@ -44,9 +44,14 @@ async def lifespan(app: FastAPI):
     # 2. 初始化 NeuroMemory
     logger.info("🧠 初始化 NeuroMemory...")
     try:
-        # 选择 Embedding Provider（优先尝试本地，失败则使用远程）
+        # 选择 Embedding Provider
         embedding_provider = None
-        if USE_LOCAL_EMBEDDING:
+        use_local = (
+            settings.EMBEDDING_PROVIDER == "local"
+            or (settings.EMBEDDING_PROVIDER == "auto" and USE_LOCAL_EMBEDDING)
+        )
+
+        if use_local:
             try:
                 logger.info("📦 尝试使用本地 Embedding 模型...")
                 embedding_provider = LocalEmbedding(model_name=settings.EMBEDDING_MODEL)
@@ -57,11 +62,10 @@ async def lifespan(app: FastAPI):
 
         if embedding_provider is None:
             logger.info("🌐 使用远程 Embedding API (OpenAI 兼容)")
-            # 使用 OpenAI 兼容的 embedding API (OpenAI/SiliconFlow 等)
             api_key = settings.OPENAI_API_KEY or settings.DEEPSEEK_API_KEY
             base_url = settings.OPENAI_BASE_URL
-            model = settings.EMBEDDING_MODEL
-            dimensions = settings.EMBEDDING_DIMENSIONS
+            model = settings.REMOTE_EMBEDDING_MODEL
+            dimensions = settings.REMOTE_EMBEDDING_DIMENSIONS
 
             logger.info(f"🔑 Embedding API: {base_url}")
             logger.info(f"📦 Embedding Model: {model} ({dimensions}D)")

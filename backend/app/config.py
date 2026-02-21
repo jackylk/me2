@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
 
     # Database (Me2 用户表 + NeuroMemory 共用)
-    DATABASE_URL: str = "postgresql+asyncpg://neuromemory:neuromemory@localhost:5432/neuromemory"
+    DATABASE_URL: str = "postgresql+asyncpg://me2_user:me2_secure_password_2026@localhost:5434/me2db"
 
     # JWT 认证
     JWT_SECRET: str = "change-me-in-production-use-random-string"
@@ -33,13 +33,13 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""  # 如果不配置，会使用 DEEPSEEK_API_KEY
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"  # 可改为 SiliconFlow 等兼容服务
 
-    # Embedding - 本地模型
-    EMBEDDING_MODEL: str = "BAAI/bge-small-zh-v1.5"  # 中文优化，512 维
+    # Embedding
+    EMBEDDING_PROVIDER: str = "auto"  # "local" | "remote" | "auto" (先尝试本地，失败则远程)
+    EMBEDDING_MODEL: str = "BAAI/bge-small-zh-v1.5"  # 本地模型名称
     EMBEDDING_DIMENSIONS: int = 512  # embedding 维度，需与模型匹配
-    # 其他可选模型：
-    # - BAAI/bge-base-zh-v1.5 (768 维，更准确但更慢)
-    # - BAAI/bge-large-zh-v1.5 (1024 维，SiliconFlow)
-    # - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 (384 维，多语言)
+    # 远程 Embedding 配置（当 EMBEDDING_PROVIDER=remote 或 auto fallback 时使用）
+    REMOTE_EMBEDDING_MODEL: str = "BAAI/bge-large-zh-v1.5"  # 远程 API 模型名称
+    REMOTE_EMBEDDING_DIMENSIONS: int = 1024  # 远程模型维度
 
     # NeuroMemory 配置
     NEUROMEMORY_EXTRACTION_INTERVAL: int = 10  # 每 10 条消息提取记忆
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     NEUROMEMORY_GRAPH_ENABLED: bool = True  # 启用知识图谱
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3333", "http://127.0.0.1:3333"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3333", "http://127.0.0.1:3333"]
 
     # 主动关心
     PROACTIVE_CHECK_INTERVAL: int = 3600  # 每小时检查一次（未来功能）
