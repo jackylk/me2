@@ -30,7 +30,7 @@ export default function AnalysisPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/deep-analysis/${userId}/deep-analyze`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/deep-analysis/${userId}/deep-analyze`,
         { method: 'POST' }
       );
 
@@ -56,7 +56,7 @@ export default function AnalysisPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/deep-analysis/${userId}/values`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/deep-analysis/${userId}/values`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,7 +81,7 @@ export default function AnalysisPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/deep-analysis/${userId}/decision-patterns`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/deep-analysis/${userId}/decision-patterns`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

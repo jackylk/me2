@@ -52,7 +52,7 @@ export default function ImportPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/import/upload`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/import/upload`,
         {
           method: 'POST',
           body: formData,
@@ -80,7 +80,7 @@ export default function ImportPage() {
     const interval = setInterval(async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/import/tasks/${taskId}`
+          `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/import/tasks/${taskId}`
         );
 
         if (response.ok) {

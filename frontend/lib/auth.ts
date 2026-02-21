@@ -142,7 +142,7 @@ export function getUsername(): string | null {
  */
 export async function register(data: RegisterData): Promise<AuthTokens> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/register`,
+    `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/register`,
     {
       method: 'POST',
       headers: {
@@ -177,7 +177,7 @@ export async function register(data: RegisterData): Promise<AuthTokens> {
  */
 export async function login(credentials: LoginCredentials): Promise<AuthTokens> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/login`,
+    `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/login`,
     {
       method: 'POST',
       headers: {

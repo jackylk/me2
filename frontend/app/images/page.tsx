@@ -34,7 +34,7 @@ export default function ImagesPage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/images/${uid}/list?limit=100`
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/images/${uid}/list?limit=100`
       );
 
       if (response.ok) {
@@ -71,7 +71,7 @@ export default function ImagesPage() {
       const filename = url.pathname.split('/').slice(-3).join('/'); // user_id/date/file
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/images/${userId}/${filename}`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/images/${userId}/${filename}`,
         { method: 'DELETE' }
       );
 
@@ -96,7 +96,7 @@ export default function ImagesPage() {
       formData.append('caption', caption);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/images/${userId}/caption`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/images/${userId}/caption`,
         {
           method: 'POST',
           body: formData,

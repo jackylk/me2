@@ -27,7 +27,7 @@ interface Memory {
   access_count?: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('me2_access_token');

@@ -30,7 +30,7 @@ export default function ProactiveMessageBanner({ userId, onMessageRead }: Proact
   const fetchMessages = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/proactive/messages/${userId}`
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/proactive/messages/${userId}`
       );
 
       if (response.ok) {
@@ -52,7 +52,7 @@ export default function ProactiveMessageBanner({ userId, onMessageRead }: Proact
       try {
         // 标记为已发送
         await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/proactive/messages/${currentMessage.contact_id}/mark-sent`,
+          `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/proactive/messages/${currentMessage.contact_id}/mark-sent`,
           { method: 'POST' }
         );
 

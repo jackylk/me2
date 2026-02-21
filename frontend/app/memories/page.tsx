@@ -25,7 +25,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Brain }[] = [
   { key: 'emotion', label: '情绪档案', icon: Heart },
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('me2_access_token');

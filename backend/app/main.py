@@ -193,13 +193,8 @@ async def root():
 @app.get("/health")
 async def health():
     """健康检查"""
-    # 检查 NeuroMemory 是否正常
     nm_status = "healthy" if nm is not None else "not_initialized"
-
-    return {
-        "status": "healthy",
-        "neuromemory": nm_status
-    }
+    return {"status": "healthy", "neuromemory": nm_status}
 
 
 if __name__ == "__main__":
