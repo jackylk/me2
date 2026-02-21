@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageCircle, Database } from 'lucide-react';
+import { MessageCircle, Database, Settings } from 'lucide-react';
 import SidebarItem from './SidebarItem';
 import UserMenu from './UserMenu';
 
@@ -18,6 +18,7 @@ export default function Sidebar() {
         {/* Primary */}
         <SidebarItem href="/" icon={MessageCircle} label="聊天" />
         <SidebarItem href="/memories" icon={Database} label="记忆" />
+        <SidebarItem href="/settings" icon={Settings} label="设置" />
       </nav>
 
       {/* User */}
