@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2, Sparkles, Bug, Brain, ChevronDown, ChevronUp, Menu, Plus } from 'lucide-react';
 import { apiClient, ChatMessage, StreamChunk, RecalledMemory } from '@/lib/api-client';
+import { getMemoryTypeName } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DebugPanel from './DebugPanel';
@@ -403,6 +404,11 @@ function MemoryRecallTag({
               <span className="text-purple-400/50 font-mono shrink-0">
                 {(mem.score * 100).toFixed(0)}%
               </span>
+              {mem.memory_type && (
+                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/15 text-purple-300/80">
+                  {getMemoryTypeName(mem.memory_type)}
+                </span>
+              )}
               <span className="text-purple-300/70 leading-relaxed">
                 {mem.content}
               </span>

@@ -7,6 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 export interface RecalledMemory {
   content: string;
   score: number;
+  memory_type?: string;
 }
 
 export interface ChatMessage {
