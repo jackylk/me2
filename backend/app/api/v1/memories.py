@@ -450,11 +450,18 @@ async def get_memory_stats(current_user: User = Depends(get_current_user)):
         recent = await nm.get_recent_memories(current_user.id, days=7)
         recent_count = len(recent)
 
+        try:
+            from importlib.metadata import version as pkg_version
+            nm_version = pkg_version("neuromemory")
+        except Exception:
+            nm_version = "unknown"
+
         return {
             "total": total,
             "by_type": by_type,
             "recent_7_days_total": recent_count,
             "avg_per_day": round(recent_count / 7, 1) if recent_count > 0 else 0,
+            "neuromemory_version": nm_version,
         }
     except Exception as e:
         logger.error(f"获取统计信息失败: {e}", exc_info=True)

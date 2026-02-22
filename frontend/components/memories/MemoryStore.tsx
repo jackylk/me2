@@ -139,6 +139,28 @@ export default function MemoryStore() {
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAll = async () => {
+    if (!confirm('确定要清除所有记忆吗？此操作不可恢复！')) return;
+    setDeleting(true);
+    try {
+      const mt = typeFilter !== 'all' ? `?memory_type=${typeFilter}` : '';
+      const response = await fetch(`${API_BASE}/memories/all${mt}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (response.ok) {
+        loadMemories();
+        loadStats();
+      }
+    } catch (error) {
+      console.error('清除失败:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
       const s = new Set(prev);
@@ -186,8 +208,14 @@ export default function MemoryStore() {
           </div>
         </div>
       )}
+      {/* NeuroMemory 版本 */}
+      {stats?.neuromemory_version && (
+        <div className="mb-4 text-xs text-gray-400 dark:text-gray-500">
+          NeuroMemory v{stats.neuromemory_version}
+        </div>
+      )}
 
-      {/* 过滤 + 视图切换 */}
+      {/* 过滤 + 视图切换 + 清除 */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex flex-wrap gap-2">
           {TYPE_FILTERS.map((f) => (
@@ -233,6 +261,13 @@ export default function MemoryStore() {
             }`}
           >
             <Clock className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleDeleteAll}
+            disabled={deleting || total === 0}
+            className="ml-2 px-3 py-1.5 rounded-full text-sm bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 disabled:opacity-30 transition-colors"
+          >
+            {deleting ? '清除中...' : typeFilter !== 'all' ? '清除该类型' : '清除所有记忆'}
           </button>
         </div>
       </div>
