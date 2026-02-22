@@ -404,11 +404,15 @@ function MemoryRecallTag({
               <span className="text-purple-400/50 font-mono shrink-0">
                 {(mem.score * 100).toFixed(0)}%
               </span>
-              {mem.memory_type && (
+              {mem.source === 'conversation' ? (
+                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-500/20 text-gray-400/80">
+                  对话
+                </span>
+              ) : mem.memory_type ? (
                 <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/15 text-purple-300/80">
                   {getMemoryTypeName(mem.memory_type)}
                 </span>
-              )}
+              ) : null}
               <span className="text-purple-300/70 leading-relaxed">
                 {mem.content}
               </span>

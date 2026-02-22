@@ -402,6 +402,7 @@ class ConversationEngine:
                     "content": m.get("content", "")[:100],
                     "score": round(m.get("score", 0), 2),
                     "memory_type": m.get("memory_type"),
+                    "source": m.get("source"),
                 }
                 for m in memories
             ] if memories else []

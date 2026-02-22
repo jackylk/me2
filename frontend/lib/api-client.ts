@@ -8,6 +8,7 @@ export interface RecalledMemory {
   content: string;
   score: number;
   memory_type?: string;
+  source?: string;
 }
 
 export interface ChatMessage {

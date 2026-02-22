@@ -60,6 +60,7 @@ class RecalledMemorySummary(BaseModel):
     content: str
     score: float
     memory_type: Optional[str] = None
+    source: Optional[str] = None
 
 class MessageResponse(BaseModel):
     """消息响应"""
@@ -90,6 +91,7 @@ def _get_recalled_summaries(msg) -> Optional[List[RecalledMemorySummary]]:
                 content=m.get("content", "")[:100],
                 score=round(m.get("score", 0), 2),
                 memory_type=m.get("memory_type"),
+                source=m.get("source"),
             )
             for m in msg.recalled_memories
         ]
