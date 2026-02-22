@@ -17,6 +17,7 @@ export interface ChatMessage {
   timestamp?: string;
   memories_recalled?: number;
   recalled_summaries?: RecalledMemory[];
+  system_prompt?: string;
   debug_info?: {
     model?: string;
     temperature?: number;
@@ -68,6 +69,7 @@ export interface SessionMessage {
   created_at: string;
   memories_recalled?: number;
   recalled_summaries?: RecalledMemory[];
+  system_prompt?: string;
 }
 
 export interface SessionExportData {

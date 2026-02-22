@@ -52,6 +52,7 @@ export default function ChatInterface({
         timestamp: m.created_at,
         memories_recalled: m.memories_recalled,
         recalled_summaries: m.recalled_summaries,
+        system_prompt: m.system_prompt,
       }));
       setMessages(chatMessages);
       setInternalSessionId(sid);
@@ -338,7 +339,7 @@ export default function ChatInterface({
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
               {messages
-                .filter((msg) => msg.role === 'assistant' && msg.debug_info)
+                .filter((msg) => msg.role === 'assistant' && (msg.debug_info || msg.system_prompt))
                 .map((msg, idx) => (
                   <div key={idx} className="bg-black/20 border border-white/5 rounded-xl p-3">
                     <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
@@ -350,11 +351,21 @@ export default function ChatInterface({
                           minute: '2-digit',
                         })}
                       </span>
+                      {!msg.debug_info && (
+                        <span className="text-[10px] bg-gray-500/20 px-1.5 py-0.5 rounded text-gray-400">历史</span>
+                      )}
                     </div>
-                    {msg.debug_info && <DebugPanel debugInfo={msg.debug_info} />}
+                    {msg.debug_info ? (
+                      <DebugPanel debugInfo={msg.debug_info} />
+                    ) : (
+                      <HistoryDebugView
+                        systemPrompt={msg.system_prompt}
+                        memoriesRecalled={msg.memories_recalled}
+                      />
+                    )}
                   </div>
                 ))}
-              {messages.filter((msg) => msg.role === 'assistant' && msg.debug_info).length === 0 && (
+              {messages.filter((msg) => msg.role === 'assistant' && (msg.debug_info || msg.system_prompt)).length === 0 && (
                 <div className="text-center text-muted-foreground/50 mt-12">
                   <Bug className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">开始对话后将显示调试信息</p>
@@ -364,6 +375,45 @@ export default function ChatInterface({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function HistoryDebugView({
+  systemPrompt,
+  memoriesRecalled,
+}: {
+  systemPrompt?: string;
+  memoriesRecalled?: number;
+}) {
+  const [showPrompt, setShowPrompt] = useState(false);
+
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3 space-y-3 text-xs">
+      {memoriesRecalled !== undefined && (
+        <div className="flex items-center gap-2 text-purple-400/80">
+          <Brain className="w-3.5 h-3.5" />
+          <span>召回 {memoriesRecalled} 条记忆</span>
+        </div>
+      )}
+      {systemPrompt && (
+        <div className="bg-black/20 border border-white/5 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-orange-400/90">System Prompt</span>
+            <button
+              onClick={() => setShowPrompt(!showPrompt)}
+              className="text-orange-400/80 hover:text-orange-300 transition-colors px-2 py-1 rounded-lg hover:bg-orange-500/10 text-[11px]"
+            >
+              {showPrompt ? '隐藏' : '查看'}
+            </button>
+          </div>
+          {showPrompt && (
+            <pre className="whitespace-pre-wrap text-gray-300 font-mono text-[11px] leading-relaxed max-h-96 overflow-y-auto mt-2">
+              {systemPrompt}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }
