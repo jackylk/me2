@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     REMOTE_EMBEDDING_DIMENSIONS: int = 1024  # 远程模型维度
 
     # NeuroMemory 配置
-    NEUROMEMORY_EXTRACTION_INTERVAL: int = 10  # 每 10 条消息提取记忆
-    NEUROMEMORY_REFLECTION_INTERVAL: int = 20  # 每 20 次提取后反思（约200条对话）
+    NEUROMEMORY_EXTRACTION_INTERVAL: int = 1  # 每条用户消息都异步提取记忆
+    NEUROMEMORY_REFLECTION_INTERVAL: int = 20  # 每 20 次提取后反思（即每 20 条消息）
     NEUROMEMORY_IDLE_TIMEOUT: int = 600  # 闲置 10 分钟后自动提取和反思
     NEUROMEMORY_GRAPH_ENABLED: bool = True  # 启用知识图谱
 
