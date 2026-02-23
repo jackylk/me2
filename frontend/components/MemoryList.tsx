@@ -86,7 +86,6 @@ export default function MemoryList({
       fact: 'bg-blue-100 text-blue-800',
       episodic: 'bg-green-100 text-green-800',
       insight: 'bg-orange-100 text-orange-800',
-      general: 'bg-gray-100 text-gray-800',
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
@@ -96,7 +95,6 @@ export default function MemoryList({
       fact: '事实',
       episodic: '情节',
       insight: '洞察',
-      general: '通用',
     };
     return names[type] || type;
   };

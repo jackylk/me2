@@ -41,7 +41,6 @@ export function getMemoryTypeColor(
     fact: 'blue',
     episodic: 'green',
     insight: 'orange',
-    general: 'gray',
   };
   return colors[type] || 'gray';
 }
@@ -54,7 +53,6 @@ export function getMemoryTypeName(type: string): string {
     fact: '事实',
     episodic: '情节',
     insight: '洞察',
-    general: '通用',
   };
   return names[type] || type;
 }

@@ -40,14 +40,12 @@ const TYPE_FILTERS = [
   { key: 'fact', label: '事实' },
   { key: 'episodic', label: '情节' },
   { key: 'insight', label: '洞察' },
-  { key: 'general', label: '通用' },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
   fact: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   episodic: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   insight: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  general: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
 };
 
 const PAGE_SIZE = 20;
@@ -270,7 +268,7 @@ export default function MemoryStore() {
                     ? memory.content.slice(0, 120) + '...'
                     : memory.content;
                 const typeClass =
-                  TYPE_COLORS[memory.memory_type] || TYPE_COLORS.general;
+                  TYPE_COLORS[memory.memory_type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
 
                 return (
                   <div
