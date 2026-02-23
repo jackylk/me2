@@ -4,50 +4,27 @@
 
 @layer base {
   :root {
-    --background: 33 40% 97%;        /* #FBF6F0 奶茶底色 */
-    --foreground: 25 30% 20%;        /* #3D3229 暖棕文字 */
-    --card: 33 50% 99%;              /* #FFFBF7 微暖白卡片 */
-    --card-foreground: 25 30% 20%;
-    --popover: 33 50% 99%;
-    --popover-foreground: 25 30% 20%;
-    --primary: 24 60% 58%;           /* #D4885E 暖橘强调 */
+    --background: 230 25% 9%;         /* #121520 深蓝黑底 */
+    --foreground: 220 20% 93%;        /* #ECEEF3 亮白文字 */
+    --card: 230 20% 14%;              /* #1E2230 卡片底 */
+    --card-foreground: 220 20% 93%;
+    --popover: 230 20% 14%;
+    --popover-foreground: 220 20% 93%;
+    --primary: 250 85% 68%;           /* #7C6CFA 紫蓝强调 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 30 30% 93%;         /* #F0E8DE 浅米色 */
-    --secondary-foreground: 25 30% 20%;
-    --muted: 30 30% 93%;
-    --muted-foreground: 25 15% 55%;  /* #9B8E82 暖灰文字 */
-    --accent: 30 30% 93%;
-    --accent-foreground: 25 30% 20%;
+    --secondary: 230 20% 16%;         /* #242838 次要背景 */
+    --secondary-foreground: 220 20% 93%;
+    --muted: 230 15% 18%;
+    --muted-foreground: 220 12% 55%;  /* #828BA0 弱化文字 */
+    --accent: 230 20% 16%;
+    --accent-foreground: 220 20% 93%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 25% 88%;            /* #E8DFD5 暖色边框 */
-    --input: 30 30% 95%;             /* #F5EDE4 暖色输入框 */
-    --ring: 24 60% 58%;
+    --border: 230 15% 20%;            /* #2D3244 边框 */
+    --input: 230 20% 12%;             /* #1A1E2A 输入框 */
+    --ring: 250 85% 68%;
     --radius: 0.75rem;
-    --sidebar: 30 25% 94%;           /* #F3ECE4 暖色侧边栏 */
-  }
-
-  .dark {
-    --background: 25 20% 12%;
-    --foreground: 30 20% 88%;
-    --card: 25 18% 15%;
-    --card-foreground: 30 20% 88%;
-    --popover: 25 18% 15%;
-    --popover-foreground: 30 20% 88%;
-    --primary: 24 60% 58%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 25 15% 20%;
-    --secondary-foreground: 30 20% 88%;
-    --muted: 25 15% 20%;
-    --muted-foreground: 25 12% 55%;
-    --accent: 25 15% 20%;
-    --accent-foreground: 30 20% 88%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 30 20% 88%;
-    --border: 25 15% 22%;
-    --input: 25 18% 14%;
-    --ring: 24 60% 58%;
-    --sidebar: 25 20% 10%;
+    --sidebar: 230 25% 8%;            /* #101320 侧边栏 */
   }
 }
 
@@ -56,7 +33,35 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 90%, rgba(124,108,250,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 90% 10%, rgba(56,189,248,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(168,85,247,0.06) 0%, transparent 50%),
+      hsl(var(--background));
+    background-attachment: fixed;
+  }
+}
+
+/* Glass utility classes */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .glass-card {
+    background: rgba(30, 34, 48, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 

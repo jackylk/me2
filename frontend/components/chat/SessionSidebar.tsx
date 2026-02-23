@@ -176,7 +176,7 @@ export default function SessionSidebar({
 
   if (collapsed) {
     return (
-      <div className="hidden md:flex w-12 flex-col items-center py-4 border-r border-border/30 bg-[hsl(var(--sidebar))]/50">
+      <div className="hidden md:flex w-12 flex-col items-center py-4 border-r border-white/5 glass">
         <button
           onClick={() => setCollapsed(false)}
           className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
@@ -196,7 +196,7 @@ export default function SessionSidebar({
   }
 
   return (
-    <div className="w-[280px] flex flex-col border-r border-border/30 bg-[hsl(var(--sidebar))] md:bg-[hsl(var(--sidebar))]/50 h-full">
+    <div className="w-[280px] flex flex-col border-r border-white/5 glass h-full">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-3 border-b border-border/30">
         <button
@@ -408,7 +408,7 @@ function SessionItem({
       {menuOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-full mt-1 z-50 w-40 bg-card border border-border rounded-lg shadow-xl py-1"
+          className="absolute right-0 top-full mt-1 z-50 w-40 glass-strong rounded-lg shadow-xl py-1"
         >
           <button
             onClick={onStartRename}

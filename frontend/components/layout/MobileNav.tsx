@@ -32,7 +32,7 @@ export default function MobileNav() {
   return (
     <>
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[hsl(var(--sidebar))] border-t border-border z-40 flex items-center justify-around safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/5 z-40 flex items-center justify-around safe-area-pb">
         <Link href="/" className={tabClass('/')}>
           <MessageCircle className="w-5 h-5" />
           <span>聊天</span>
@@ -62,7 +62,7 @@ export default function MobileNav() {
 
       {/* Bottom drawer */}
       <div
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl transition-transform duration-300 ${
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 glass-strong rounded-t-2xl transition-transform duration-300 ${
           drawerOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
