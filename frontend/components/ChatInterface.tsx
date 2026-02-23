@@ -32,6 +32,7 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
   const instantScrollRef = useRef(false);
+  const skipNextLoadRef = useRef(false);
 
   const sessionId = externalSessionId ?? internalSessionId;
 
@@ -68,6 +69,11 @@ export default function ChatInterface({
     if (externalSessionId) {
       // Skip loading history while streaming to avoid overwriting in-progress messages
       if (isStreamingRef.current) return;
+      // Skip if this session change was triggered by our own streaming (messages already in state)
+      if (skipNextLoadRef.current) {
+        skipNextLoadRef.current = false;
+        return;
+      }
       loadHistory(externalSessionId);
     } else {
       setMessages([]);
@@ -120,6 +126,7 @@ export default function ChatInterface({
         } else if (chunk.type === 'done') {
           if (chunk.session_id) {
             setInternalSessionId(chunk.session_id);
+            skipNextLoadRef.current = true;
             onSessionChange?.(chunk.session_id, !!chunk.is_new_session);
           }
           memoriesRecalled = chunk.memories_recalled || 0;
