@@ -31,15 +31,14 @@ export default function ChatInterface({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
+  const instantScrollRef = useRef(false);
 
   const sessionId = externalSessionId ?? internalSessionId;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    const instant = instantScrollRef.current;
+    instantScrollRef.current = false;
+    messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
   }, [messages]);
 
   // Load history when externalSessionId changes
@@ -55,6 +54,7 @@ export default function ChatInterface({
         recalled_summaries: m.recalled_summaries,
         system_prompt: m.system_prompt,
       }));
+      instantScrollRef.current = true;
       setMessages(chatMessages);
       setInternalSessionId(sid);
     } catch (err) {
