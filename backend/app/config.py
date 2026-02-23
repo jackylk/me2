@@ -60,7 +60,12 @@ class Settings(BaseSettings):
     NEUROMEMORY_GRAPH_ENABLED: bool = True  # 启用知识图谱
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3333", "http://127.0.0.1:3333"]
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000", "http://127.0.0.1:3000",
+        "http://localhost:3001", "http://127.0.0.1:3001",
+        "http://localhost:3333", "http://127.0.0.1:3333",
+        "https://me2.up.railway.app",
+    ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
