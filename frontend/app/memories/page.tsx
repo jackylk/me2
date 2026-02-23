@@ -95,7 +95,7 @@ export default function MemoriesPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6 h-full overflow-y-auto">
+      <div className="p-6 pb-20 md:pb-6 h-full overflow-y-auto">
         <h1 className="text-3xl font-bold mb-2 dark:text-white">记忆管理</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-6">
           查看、管理和探索你的记忆
