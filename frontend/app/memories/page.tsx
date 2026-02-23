@@ -5,7 +5,7 @@ import {
   Brain,
   UserCircle,
   Network,
-  Heart,
+  Sparkles,
   Search as SearchIcon,
   MessageCircle,
   Loader2,
@@ -16,13 +16,13 @@ import ProfileSection from '@/components/memories/ProfileSection';
 import KnowledgeGraph from '@/components/memories/KnowledgeGraph';
 import EmotionSection from '@/components/memories/EmotionSection';
 
-type TabKey = 'cognitive' | 'profile' | 'graph' | 'emotion';
+type TabKey = 'cognitive' | 'reflect' | 'profile' | 'graph';
 
 const TABS: { key: TabKey; label: string; icon: typeof Brain }[] = [
   { key: 'cognitive', label: '认知记忆', icon: Brain },
+  { key: 'reflect', label: '反思记忆', icon: Sparkles },
   { key: 'profile', label: '用户档案', icon: UserCircle },
   { key: 'graph', label: '知识图谱', icon: Network },
-  { key: 'emotion', label: '情绪档案', icon: Heart },
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
@@ -36,7 +36,7 @@ function getAuthHeaders(): Record<string, string> {
 export default function MemoriesPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('cognitive');
   const [activatedTabs, setActivatedTabs] = useState<Set<TabKey>>(
-    new Set(['cognitive'])
+    new Set<TabKey>(['cognitive'])
   );
 
   // Search & correction
@@ -122,16 +122,21 @@ export default function MemoriesPage() {
         {/* Tab 内容 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow w-full min-h-[400px]">
           {activeTab === 'cognitive' && activatedTabs.has('cognitive') && (
-            <MemoryStore />
+            <MemoryStore allowedTypes={['fact', 'episodic']} />
+          )}
+          {activeTab === 'reflect' && activatedTabs.has('reflect') && (
+            <div>
+              <MemoryStore allowedTypes={['insight']} />
+              <div className="border-t border-gray-200 dark:border-gray-700">
+                <EmotionSection />
+              </div>
+            </div>
           )}
           {activeTab === 'profile' && activatedTabs.has('profile') && (
             <ProfileSection />
           )}
           {activeTab === 'graph' && activatedTabs.has('graph') && (
             <KnowledgeGraph />
-          )}
-          {activeTab === 'emotion' && activatedTabs.has('emotion') && (
-            <EmotionSection />
           )}
         </div>
 

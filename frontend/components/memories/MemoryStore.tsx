@@ -50,12 +50,13 @@ const TYPE_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
-export default function MemoryStore() {
+export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] }) {
+  const singleType = allowedTypes?.length === 1 ? allowedTypes[0] : undefined;
   const [memories, setMemories] = useState<Memory[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState(singleType ?? 'all');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
 
@@ -77,7 +78,12 @@ export default function MemoryStore() {
       );
       if (response.ok) {
         const data = await response.json();
-        setMemories(data.items || []);
+        let items = data.items || [];
+        // Client-side filter when showing "全部" but restricted to allowedTypes
+        if (typeFilter === 'all' && allowedTypes && allowedTypes.length > 1) {
+          items = items.filter((m: Memory) => allowedTypes.includes(m.memory_type));
+        }
+        setMemories(items);
         setTotal(data.total || 0);
       }
     } catch (error) {
@@ -85,7 +91,7 @@ export default function MemoryStore() {
     } finally {
       setLoading(false);
     }
-  }, [page, typeFilter]);
+  }, [page, typeFilter, allowedTypes]);
 
   const loadStats = async () => {
     try {
@@ -163,59 +169,40 @@ export default function MemoryStore() {
     <div className="p-6">
       {/* 统计 */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold dark:text-white">{stats.total}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">总记忆</div>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold dark:text-white">{stats.recent_7_days_total}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">近7天</div>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold dark:text-white">{stats.avg_per_day}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">日均</div>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold dark:text-white">
-              {Object.keys(stats.by_type || {}).length}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">类型数</div>
-          </div>
-        </div>
-      )}
-      {/* NeuroMemory 版本 */}
-      {stats?.neuromemory_version && (
-        <div className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-          NeuroMemory v{stats.neuromemory_version}
+        <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          共 {total} 条记忆
         </div>
       )}
 
       {/* 过滤 + 视图切换 + 清除 */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex flex-wrap gap-2">
-          {TYPE_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => {
-                setTypeFilter(f.key);
-                setPage(0);
-              }}
-              className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                typeFilter === f.key
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {f.label}
-              {stats?.by_type?.[f.key] !== undefined && (
-                <span className="ml-1 text-xs opacity-75">
-                  ({stats.by_type[f.key]})
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {!singleType && (
+          <div className="flex flex-wrap gap-2">
+            {TYPE_FILTERS.filter(
+              (f) => f.key === 'all' || !allowedTypes || allowedTypes.includes(f.key)
+            ).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => {
+                  setTypeFilter(f.key);
+                  setPage(0);
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  typeFilter === f.key
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {f.label}
+                {stats?.by_type?.[f.key] !== undefined && (
+                  <span className="ml-1 text-xs opacity-75">
+                    ({stats.by_type[f.key]})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-1">
           <button
