@@ -125,112 +125,97 @@ export default function KnowledgeGraph() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex gap-4" style={{ height: '600px' }}>
-        {/* 图谱可视化 */}
-        <div className="flex-1 relative">
-          <MemoryGraph
-            elements={elements}
-            onNodeClick={handleNodeClick}
-            nodeColors={NODE_TYPE_COLORS}
-          />
-        </div>
+    <div className="p-3 md:p-6">
+      {/* 图谱可视化 */}
+      <div className="relative w-full" style={{ height: '320px' }} data-md-height="600px">
+        <style>{`@media (min-width: 768px) { [data-md-height] { height: 600px !important; } }`}</style>
+        <MemoryGraph
+          elements={elements}
+          onNodeClick={handleNodeClick}
+          nodeColors={NODE_TYPE_COLORS}
+        />
+      </div>
 
-        {/* 节点列表面板 */}
-        <div className="w-64 border-l border-gray-200 dark:border-gray-700 pl-4 overflow-y-auto">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-            节点列表 ({totalNodes})
-          </h4>
+      {/* 节点列表 — 移动端在图谱下方，桌面端也保持竖排 */}
+      <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          节点列表 ({totalNodes} 节点 · {totalEdges} 关系)
+        </h4>
 
-          {/* 图例 */}
-          <div className="mb-4 space-y-1">
-            {Object.entries(NODE_TYPE_COLORS)
-              .filter(([type]) => elements.nodes.some((n) => n.data.type === type))
-              .map(([type, color]) => (
-                <div key={type} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {NODE_TYPE_LABELS[type] || type}
-                  </span>
-                </div>
-              ))}
-          </div>
-
-          {/* 节点 */}
-          <div className="space-y-1">
-            {elements.nodes.map((node) => {
-              const d = node.data;
-              const isSelected = selectedNode?.id === d.id;
-              const color = NODE_TYPE_COLORS[d.type] || NODE_TYPE_COLORS.entity;
-
-              return (
-                <div
-                  key={d.id}
-                  className={`flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                  onClick={() => setSelectedNode(d)}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="truncate text-gray-800 dark:text-gray-200">
-                      {d.label}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNode(d);
-                    }}
-                    className="p-0.5 text-gray-300 hover:text-red-500 flex-shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 选中节点详情 */}
-          {selectedNode && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                节点详情
-              </h5>
-              <div className="space-y-1 text-xs">
-                <div>
-                  <span className="text-gray-500">名称: </span>
-                  <span className="text-gray-800 dark:text-gray-200">
-                    {selectedNode.label}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-500">类型: </span>
-                  <span className="text-gray-800 dark:text-gray-200">
-                    {NODE_TYPE_LABELS[selectedNode.type] || selectedNode.type}
-                  </span>
-                </div>
-                {selectedNode.properties &&
-                  Object.keys(selectedNode.properties).length > 0 && (
-                    <div className="mt-2">
-                      <span className="text-gray-500">属性:</span>
-                      <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs overflow-x-auto">
-                        {JSON.stringify(selectedNode.properties, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+        {/* 图例 — 横向滚动 */}
+        <div className="flex gap-3 mb-3 overflow-x-auto pb-1">
+          {Object.entries(NODE_TYPE_COLORS)
+            .filter(([type]) => elements.nodes.some((n) => n.data.type === type))
+            .map(([type, color]) => (
+              <div key={type} className="flex items-center gap-1.5 shrink-0">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {NODE_TYPE_LABELS[type] || type}
+                </span>
               </div>
-            </div>
-          )}
+            ))}
         </div>
+
+        {/* 节点网格 */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+          {elements.nodes.map((node) => {
+            const d = node.data;
+            const isSelected = selectedNode?.id === d.id;
+            const color = NODE_TYPE_COLORS[d.type] || NODE_TYPE_COLORS.entity;
+
+            return (
+              <div
+                key={d.id}
+                className={`flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700 border border-transparent'
+                }`}
+                onClick={() => setSelectedNode(d)}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="truncate text-xs text-gray-800 dark:text-gray-200">{d.label}</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteNode(d); }}
+                  className="p-0.5 text-gray-300 hover:text-red-500 flex-shrink-0 ml-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 选中节点详情 */}
+        {selectedNode && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+              节点详情
+            </h5>
+            <div className="space-y-1 text-xs">
+              <div>
+                <span className="text-gray-500">名称: </span>
+                <span className="text-gray-800 dark:text-gray-200">{selectedNode.label}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">类型: </span>
+                <span className="text-gray-800 dark:text-gray-200">
+                  {NODE_TYPE_LABELS[selectedNode.type] || selectedNode.type}
+                </span>
+              </div>
+              {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
+                <div className="mt-2">
+                  <span className="text-gray-500">属性:</span>
+                  <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs overflow-x-auto">
+                    {JSON.stringify(selectedNode.properties, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
