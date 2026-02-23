@@ -185,10 +185,14 @@ async def root():
 @app.get("/api/v1/version")
 async def version():
     """版本信息"""
-    import neuromemory
+    from importlib.metadata import version as pkg_version
+    try:
+        nm_version = pkg_version("neuromemory")
+    except Exception:
+        nm_version = "unknown"
     return {
         "app": settings.APP_VERSION,
-        "neuromemory": getattr(neuromemory, "__version__", "unknown"),
+        "neuromemory": nm_version,
     }
 
 
