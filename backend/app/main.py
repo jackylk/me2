@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.db.database import init_db, close_db
 import logging
+import time
 
 # 配置日志
 logging.basicConfig(
@@ -163,6 +164,24 @@ class CORSHandler(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(CORSHandler)
+
+# API metrics middleware
+from app.services.metrics_collector import MetricsCollector
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start) * 1000
+    # Only track API routes
+    if request.url.path.startswith("/api/"):
+        MetricsCollector().record_api(
+            path=request.url.path,
+            method=request.method,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+        )
+    return response
 
 # 注册路由
 from app.api.v1 import auth, chat, memories
