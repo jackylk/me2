@@ -1,8 +1,11 @@
 """OpenAI 兼容的 Embedding Provider（远程 API，无需 torch）"""
-from neuromemory.providers import EmbeddingProvider
-from openai import AsyncOpenAI
+import time
 import logging
 from typing import List
+
+from neuromemory.providers import EmbeddingProvider
+from openai import AsyncOpenAI
+from app.services.metrics_collector import MetricsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +46,18 @@ class OpenAIEmbedding(EmbeddingProvider):
         Returns:
             embedding 向量
         """
+        start = time.time()
         try:
             response = await self.client.embeddings.create(
                 input=[text],
                 model=self.model
             )
+            duration_ms = (time.time() - start) * 1000
+            MetricsCollector().record_embedding(self.model, 1, duration_ms, True)
             return response.data[0].embedding
         except Exception as e:
+            duration_ms = (time.time() - start) * 1000
+            MetricsCollector().record_embedding(self.model, 1, duration_ms, False)
             logger.error(f"生成 embedding 失败: {e}")
             raise
 
@@ -62,13 +70,18 @@ class OpenAIEmbedding(EmbeddingProvider):
         Returns:
             embedding 向量列表
         """
+        start = time.time()
         try:
             response = await self.client.embeddings.create(
                 input=texts,
                 model=self.model
             )
+            duration_ms = (time.time() - start) * 1000
+            MetricsCollector().record_embedding(self.model, len(texts), duration_ms, True)
             return [item.embedding for item in response.data]
         except Exception as e:
+            duration_ms = (time.time() - start) * 1000
+            MetricsCollector().record_embedding(self.model, len(texts), duration_ms, False)
             logger.error(f"批量生成 embedding 失败: {e}")
             raise
 

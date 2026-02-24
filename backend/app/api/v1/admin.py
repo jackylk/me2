@@ -72,6 +72,37 @@ async def update_user(
     return result
 
 
+# --- User data management ---
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = AdminService(db)
+    try:
+        result = await svc.delete_user(user_id, admin.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    return result
+
+
+@router.delete("/users/{user_id}/data")
+async def clear_user_data(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = AdminService(db)
+    result = await svc.clear_user_data(user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    return result
+
+
 # --- Reset ---
 
 @router.delete("/reset-all")
@@ -126,3 +157,12 @@ async def get_llm_stats(
 ):
     collector = MetricsCollector()
     return collector.get_llm_stats(last_seconds=hours * 3600)
+
+
+@router.get("/system/embedding-stats")
+async def get_embedding_stats(
+    hours: int = 24,
+    admin: User = Depends(require_admin),
+):
+    collector = MetricsCollector()
+    return collector.get_embedding_stats(last_seconds=hours * 3600)

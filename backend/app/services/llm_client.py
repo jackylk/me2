@@ -94,12 +94,19 @@ class LLMClient:
 
             # 流式生成
             if stream:
+                kwargs["stream_options"] = {"include_usage": True}
+
                 # 返回异步生成器
                 async def stream_generator():
                     full_response = ""
                     llm_start = time.time()
+                    prompt_tokens = 0
+                    completion_tokens = 0
                     try:
                         async for chunk in await self.client.chat.completions.create(**kwargs):
+                            if chunk.usage:
+                                prompt_tokens = chunk.usage.prompt_tokens or 0
+                                completion_tokens = chunk.usage.completion_tokens or 0
                             if not chunk.choices:
                                 continue
                             if chunk.choices[0].delta.content:
@@ -110,8 +117,8 @@ class LLMClient:
                         llm_duration = (time.time() - llm_start) * 1000
                         MetricsCollector().record_llm(
                             model=kwargs.get("model", "unknown"),
-                            prompt_tokens=0,
-                            completion_tokens=0,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
                             duration_ms=llm_duration,
                             success=True,
                         )
@@ -119,8 +126,8 @@ class LLMClient:
                         llm_duration = (time.time() - llm_start) * 1000
                         MetricsCollector().record_llm(
                             model=kwargs.get("model", "unknown"),
-                            prompt_tokens=0,
-                            completion_tokens=0,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
                             duration_ms=llm_duration,
                             success=False,
                         )

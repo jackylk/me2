@@ -18,6 +18,15 @@ class ApiMetric:
 
 
 @dataclass
+class EmbeddingMetric:
+    model: str
+    text_count: int
+    duration_ms: float
+    success: bool
+    timestamp: float = field(default_factory=time.time)
+
+
+@dataclass
 class LLMMetric:
     model: str
     prompt_tokens: int
@@ -40,6 +49,7 @@ class MetricsCollector:
                 cls._instance = super().__new__(cls)
                 cls._instance._api_metrics = deque(maxlen=cls.MAX_POINTS)
                 cls._instance._llm_metrics = deque(maxlen=cls.MAX_POINTS)
+                cls._instance._embedding_metrics = deque(maxlen=cls.MAX_POINTS)
                 cls._instance._start_time = time.time()
             return cls._instance
 
@@ -50,6 +60,9 @@ class MetricsCollector:
                    duration_ms: float, success: bool):
         self._llm_metrics.append(LLMMetric(model, prompt_tokens, completion_tokens,
                                             duration_ms, success))
+
+    def record_embedding(self, model: str, text_count: int, duration_ms: float, success: bool):
+        self._embedding_metrics.append(EmbeddingMetric(model, text_count, duration_ms, success))
 
     def get_uptime(self) -> float:
         return time.time() - self._start_time
@@ -109,6 +122,30 @@ class MetricsCollector:
             "today_calls": today_calls,
             "total_prompt_tokens": total_prompt,
             "total_completion_tokens": total_completion,
+            "avg_duration_ms": round(avg_duration, 1),
+            "failure_rate": round(failures / len(recent), 4) if recent else 0,
+        }
+
+    def get_embedding_stats(self, last_seconds: int = 86400) -> dict:
+        """Get Embedding call stats for the given time window."""
+        cutoff = time.time() - last_seconds
+        recent = [m for m in self._embedding_metrics if m.timestamp > cutoff]
+
+        if not recent:
+            return {"total_calls": 0, "total_texts": 0, "avg_duration_ms": 0,
+                    "failure_rate": 0}
+
+        total_texts = sum(m.text_count for m in recent)
+        avg_duration = sum(m.duration_ms for m in recent) / len(recent)
+        failures = sum(1 for m in recent if not m.success)
+
+        today_start = time.time() - (time.time() % 86400)
+        today_calls = sum(1 for m in recent if m.timestamp > today_start)
+
+        return {
+            "total_calls": len(recent),
+            "today_calls": today_calls,
+            "total_texts": total_texts,
             "avg_duration_ms": round(avg_duration, 1),
             "failure_rate": round(failures / len(recent), 4) if recent else 0,
         }

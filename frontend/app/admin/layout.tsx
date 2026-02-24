@@ -2,12 +2,14 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Users, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Database, ArrowLeft } from 'lucide-react';
 import AdminRoute from '@/components/admin/AdminRoute';
 
 const NAV_ITEMS = [
   { href: '/admin', label: '仪表盘', icon: LayoutDashboard, exact: true },
   { href: '/admin/users', label: '用户', icon: Users },
+  { href: '/admin/usage', label: '用量统计', icon: BarChart3 },
+  { href: '/admin/database', label: '数据管理', icon: Database },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

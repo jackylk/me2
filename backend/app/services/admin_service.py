@@ -290,6 +290,72 @@ class AdminService:
             "updated_at": user.updated_at.isoformat() if user.updated_at else None,
         }
 
+    async def delete_user(self, user_id: str, current_admin_id: str) -> dict[str, Any]:
+        """
+        删除用户及其所有数据。不能删除自己。
+        CASCADE 会自动清 sessions/messages，额外清非 ORM 表。
+        """
+        if user_id == current_admin_id:
+            raise ValueError("不能删除自己的账号")
+
+        user_result = await self.db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            return None
+
+        username = user.username
+
+        # 清理非 ORM 表中的用户数据
+        for table in ("embeddings", "graph_nodes", "graph_edges", "key_values", "emotion_profiles", "documents"):
+            try:
+                await self.db.execute(text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": user_id})
+            except Exception:
+                pass
+
+        # 删除用户（CASCADE 自动清 sessions -> messages）
+        await self.db.execute(delete(User).where(User.id == user_id))
+        await self.db.commit()
+
+        return {"user_id": user_id, "username": username, "deleted": True}
+
+    async def clear_user_data(self, user_id: str) -> dict[str, Any]:
+        """
+        清空用户数据（保留用户账号）。
+        删除会话、消息、记忆、图谱等。
+        """
+        user_result = await self.db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            return None
+
+        deleted: dict[str, int] = {}
+
+        # 消息（通过 user_id）
+        result = await self.db.execute(delete(Message).where(Message.user_id == user_id))
+        deleted["messages"] = result.rowcount
+
+        # 会话
+        result = await self.db.execute(delete(Session).where(Session.user_id == user_id))
+        deleted["sessions"] = result.rowcount
+
+        # 非 ORM 表
+        for table in ("embeddings", "graph_nodes", "graph_edges", "key_values", "emotion_profiles", "documents"):
+            try:
+                result = await self.db.execute(
+                    text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": user_id}
+                )
+                deleted[table] = result.rowcount
+            except Exception:
+                deleted[table] = 0
+
+        await self.db.commit()
+
+        return {"user_id": user_id, "username": user.username, "deleted": deleted}
+
     async def reset_all_data(self) -> dict[str, int]:
         """
         清空所有业务数据并重建默认 admin 账号。
