@@ -66,7 +66,7 @@ export default function UsersListPage() {
       );
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users);
+        setUsers(data.items || data.users);
         setTotal(data.total);
       }
     } catch (e) {
