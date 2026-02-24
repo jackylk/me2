@@ -96,21 +96,21 @@ export default function MemoriesPage() {
   return (
     <ProtectedRoute>
       <div className="p-6 pb-20 md:pb-6 h-full overflow-y-auto">
-        <h1 className="text-3xl font-bold mb-2 dark:text-white">记忆管理</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">
+        <h1 className="text-3xl font-bold mb-2 text-foreground">记忆管理</h1>
+        <p className="text-muted-foreground mb-6">
           查看、管理和探索你的记忆
         </p>
 
         {/* Tab 栏 */}
-        <div className="flex gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div className="flex gap-1 mb-4 border-b border-white/10 overflow-x-auto">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === key
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-white/20'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -120,14 +120,14 @@ export default function MemoriesPage() {
         </div>
 
         {/* Tab 内容 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow w-full min-h-[400px]">
+        <div className="glass-card rounded-xl w-full min-h-[400px]">
           {activeTab === 'cognitive' && activatedTabs.has('cognitive') && (
             <MemoryStore allowedTypes={['fact', 'episodic']} />
           )}
           {activeTab === 'reflect' && activatedTabs.has('reflect') && (
             <div>
               <MemoryStore allowedTypes={['insight']} />
-              <div className="border-t border-gray-200 dark:border-gray-700">
+              <div className="border-t border-white/5">
                 <EmotionSection />
               </div>
             </div>
@@ -141,11 +141,11 @@ export default function MemoriesPage() {
         </div>
 
         {/* 语义搜索 & 对话式纠正 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow w-full mt-6 p-6">
+        <div className="glass-card rounded-xl w-full mt-6 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 语义搜索 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 语义搜索
               </label>
               <div className="flex gap-2">
@@ -155,12 +155,12 @@ export default function MemoriesPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="搜索记忆..."
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-1.5 text-sm border border-white/10 rounded-lg bg-white/5 text-foreground placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/40 focus:border-transparent"
                 />
                 <button
                   onClick={handleSearch}
                   disabled={searching || !searchQuery.trim()}
-                  className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/80 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {searching ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -174,7 +174,7 @@ export default function MemoriesPage() {
 
             {/* 对话式纠正 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 对话式纠正
               </label>
               <div className="flex gap-2">
@@ -184,12 +184,12 @@ export default function MemoriesPage() {
                   onChange={(e) => setCorrectionInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleCorrection()}
                   placeholder='例如："我女儿不叫灿灿，叫小灿"'
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-1.5 text-sm border border-white/10 rounded-lg bg-white/5 text-foreground placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/40 focus:border-transparent"
                 />
                 <button
                   onClick={handleCorrection}
                   disabled={correcting || !correctionInput.trim()}
-                  className="px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {correcting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -204,8 +204,8 @@ export default function MemoriesPage() {
 
           {/* 搜索结果 */}
           {searchResults.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="text-sm font-medium text-muted-foreground mb-3">
                 搜索结果 ({searchResults.length} 条)
               </div>
               <div className="space-y-2">
@@ -213,10 +213,10 @@ export default function MemoriesPage() {
                   <a
                     key={m.id}
                     href={`/memories/${m.id}`}
-                    className="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"
+                    className="block p-3 bg-white/5 rounded-lg hover:bg-white/10"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/15 text-primary">
                         {m.memory_type}
                       </span>
                       {m.score && (
@@ -225,7 +225,7 @@ export default function MemoriesPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">
+                    <p className="text-sm text-foreground/80 line-clamp-2">
                       {m.content}
                     </p>
                   </a>

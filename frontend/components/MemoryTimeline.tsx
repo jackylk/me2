@@ -84,11 +84,11 @@ export default function MemoryTimeline({
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      fact: 'text-blue-600',
-      episodic: 'text-green-600',
-      insight: 'text-orange-600',
+      fact: 'text-blue-400',
+      episodic: 'text-green-400',
+      insight: 'text-orange-400',
     };
-    return colors[type] || 'text-gray-600';
+    return colors[type] || 'text-muted-foreground';
   };
 
   return (
@@ -100,8 +100,8 @@ export default function MemoryTimeline({
             onClick={() => onGranularityChange('day')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               granularity === 'day'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary text-white'
+                : 'bg-white/5 text-muted-foreground hover:bg-white/10'
             }`}
           >
             按日
@@ -110,8 +110,8 @@ export default function MemoryTimeline({
             onClick={() => onGranularityChange('week')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               granularity === 'week'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary text-white'
+                : 'bg-white/5 text-muted-foreground hover:bg-white/10'
             }`}
           >
             按周
@@ -120,8 +120,8 @@ export default function MemoryTimeline({
             onClick={() => onGranularityChange('month')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               granularity === 'month'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary text-white'
+                : 'bg-white/5 text-muted-foreground hover:bg-white/10'
             }`}
           >
             按月
@@ -132,12 +132,12 @@ export default function MemoryTimeline({
       {/* 时间线 */}
       <div className="relative">
         {/* 垂直线 */}
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/10" />
 
         {/* 时间点 */}
         <div className="space-y-6">
           {timeline.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               没有记忆数据
             </div>
           ) : (
@@ -148,31 +148,31 @@ export default function MemoryTimeline({
                 <div key={group.date} className="relative pl-12">
                   {/* 时间点标记 */}
                   <div className="absolute left-0 top-0 flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                       {group.count}
                     </div>
                   </div>
 
                   {/* 内容卡片 */}
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="glass-card rounded-lg overflow-hidden">
                     {/* 日期头部 */}
                     <button
                       onClick={() => toggleExpand(group.date)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-gray-400" />
+                        <Calendar className="w-5 h-5 text-muted-foreground/40" />
                         <div className="text-left">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-foreground">
                             {formatDate(group.date)}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground/50">
                             {group.count} 条记忆
                           </div>
                         </div>
                       </div>
                       <ChevronRight
-                        className={`w-5 h-5 text-gray-400 transition-transform ${
+                        className={`w-5 h-5 text-muted-foreground/40 transition-transform ${
                           isExpanded ? 'rotate-90' : ''
                         }`}
                       />
@@ -180,12 +180,12 @@ export default function MemoryTimeline({
 
                     {/* 展开的记忆列表 */}
                     {isExpanded && (
-                      <div className="border-t border-gray-200 bg-gray-50 p-4">
+                      <div className="border-t border-white/5 bg-white/[0.03] p-4">
                         <div className="space-y-3">
                           {group.memories.map((memory) => (
                             <div
                               key={memory.id}
-                              className="bg-white rounded-lg p-3 border border-gray-100"
+                              className="bg-white/5 rounded-lg p-3 border border-white/5"
                             >
                               <div className="flex items-start gap-2 mb-2">
                                 <span
@@ -195,7 +195,7 @@ export default function MemoryTimeline({
                                 >
                                   {getTypeName(memory.memory_type)}
                                 </span>
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-muted-foreground/40">
                                   {new Date(memory.timestamp).toLocaleTimeString(
                                     'zh-CN',
                                     {
@@ -205,7 +205,7 @@ export default function MemoryTimeline({
                                   )}
                                 </span>
                               </div>
-                              <div className="text-sm text-gray-800">
+                              <div className="text-sm text-foreground/80">
                                 {memory.content.length > 150
                                   ? memory.content.slice(0, 150) + '...'
                                   : memory.content}
@@ -225,7 +225,7 @@ export default function MemoryTimeline({
 
       {/* 统计 */}
       {timeline.length > 0 && (
-        <div className="text-center text-sm text-gray-500 pt-4">
+        <div className="text-center text-sm text-muted-foreground pt-4">
           共 {timeline.length} 个时间节点，
           {timeline.reduce((sum, g) => sum + g.count, 0)} 条记忆
         </div>

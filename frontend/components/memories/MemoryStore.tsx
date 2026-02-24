@@ -43,9 +43,9 @@ const TYPE_FILTERS = [
 ];
 
 const TYPE_COLORS: Record<string, string> = {
-  fact: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  episodic: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  insight: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  fact: 'bg-blue-500/15 text-blue-400',
+  episodic: 'bg-green-500/15 text-green-400',
+  insight: 'bg-orange-500/15 text-orange-400',
 };
 
 const PAGE_SIZE = 20;
@@ -169,7 +169,7 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
     <div className="p-6">
       {/* 统计 */}
       {stats && (
-        <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <div className="mb-4 text-sm text-muted-foreground">
           共 {total} 条记忆
         </div>
       )}
@@ -189,8 +189,8 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                   typeFilter === f.key
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-primary text-white'
+                    : 'bg-white/5 text-muted-foreground hover:bg-white/10'
                 }`}
               >
                 {f.label}
@@ -209,8 +209,8 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
             onClick={() => handleViewModeChange('list')}
             className={`p-2 rounded transition-colors ${
               viewMode === 'list'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600'
+                ? 'bg-primary/15 text-primary'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
             <List className="w-4 h-4" />
@@ -219,8 +219,8 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
             onClick={() => handleViewModeChange('timeline')}
             className={`p-2 rounded transition-colors ${
               viewMode === 'timeline'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600'
+                ? 'bg-primary/15 text-primary'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
             <Clock className="w-4 h-4" />
@@ -231,7 +231,7 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
       {/* 内容 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : viewMode === 'timeline' ? (
         <MemoryTimeline
@@ -243,11 +243,11 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
         <>
           {/* 列表 */}
           {memories.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-12 text-muted-foreground">
               {singleType === 'insight' ? (
                 <div className="space-y-2">
                   <div>暂无洞察记忆</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500 max-w-xs mx-auto">
+                  <div className="text-xs text-muted-foreground/50 max-w-xs mx-auto">
                     多聊几轮后，系统会自动分析对话，提炼出关于你的高层洞察
                   </div>
                 </div>
@@ -264,12 +264,12 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                     ? memory.content.slice(0, 120) + '...'
                     : memory.content;
                 const typeClass =
-                  TYPE_COLORS[memory.memory_type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+                  TYPE_COLORS[memory.memory_type] || 'bg-white/10 text-muted-foreground';
 
                 return (
                   <div
                     key={memory.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="glass-card rounded-lg p-4 hover:bg-white/[0.04] transition-shadow"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -278,14 +278,14 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                         >
                           {getMemoryTypeName(memory.memory_type)}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
                           <Calendar className="w-3 h-3" />
                           {memory.timestamp
                             ? new Date(memory.timestamp).toLocaleDateString('zh-CN')
                             : '未知'}
                         </span>
                         {memory.access_count !== undefined && memory.access_count > 0 && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground/60">
                             访问 {memory.access_count}x
                           </span>
                         )}
@@ -293,14 +293,14 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                       <div className="flex items-center gap-1">
                         <a
                           href={`/memories/${memory.id}`}
-                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-1 text-muted-foreground/40 hover:text-primary transition-colors"
                           title="编辑"
                         >
                           <Edit className="w-4 h-4" />
                         </a>
                         <button
                           onClick={() => handleDelete(memory.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-1 text-muted-foreground/40 hover:text-red-400 transition-colors"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -308,14 +308,14 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                       </div>
                     </div>
 
-                    <div className="text-gray-800 dark:text-gray-200 text-sm">
+                    <div className="text-foreground/80 text-sm">
                       {isExpanded ? memory.content : preview}
                     </div>
 
                     {memory.content.length > 120 && (
                       <button
                         onClick={() => toggleExpand(memory.id)}
-                        className="flex items-center gap-1 text-xs text-blue-600 mt-2 hover:text-blue-700"
+                        className="flex items-center gap-1 text-xs text-primary/70 mt-2 hover:text-primary"
                       >
                         {isExpanded ? (
                           <>
@@ -331,8 +331,8 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
 
                     {/* Metadata (expanded only) */}
                     {isExpanded && memory.metadata && Object.keys(memory.metadata).length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                      <div className="mt-3 pt-3 border-t border-white/5">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground/50 mb-1">
                           <Tag className="w-3 h-3" /> 元数据
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -342,7 +342,7 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
                             .map(([k, v]) => (
                               <span
                                 key={k}
-                                className="px-2 py-0.5 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400"
+                                className="px-2 py-0.5 bg-white/5 rounded text-xs text-muted-foreground/60"
                               >
                                 {k}: {typeof v === 'object' ? JSON.stringify(v).slice(0, 30) : String(v).slice(0, 30)}
                               </span>
@@ -366,7 +366,7 @@ export default function MemoryStore({ allowedTypes }: { allowedTypes?: string[] 
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {page + 1} / {totalPages}
               </span>
               <button

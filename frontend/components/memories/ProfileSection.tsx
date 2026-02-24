@@ -151,7 +151,7 @@ export default function ProfileSection() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function ProfileSection() {
     <div className="p-6 space-y-8">
       {/* 用户档案 */}
       <div>
-        <h3 className="text-lg font-semibold dark:text-white mb-4">用户档案</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">用户档案</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {PROFILE_FIELDS.map(({ key, label, icon: Icon, isArray }) => {
             const val = profile[key];
@@ -170,17 +170,17 @@ export default function ProfileSection() {
             return (
               <div
                 key={key}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                className="glass-card rounded-lg p-4"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     <Icon className="w-4 h-4" />
                     {label}
                   </div>
                   {!isEditing && (
                     <button
                       onClick={() => handleEditStart(key)}
-                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                      className="p-1 text-muted-foreground/40 hover:text-primary transition-colors"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
@@ -195,24 +195,24 @@ export default function ProfileSection() {
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleEditSave(key)}
                       placeholder={isArray ? '逗号分隔多个值' : `输入${label}`}
-                      className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="flex-1 px-3 py-1.5 text-sm border border-white/10 rounded bg-white/5 text-foreground"
                       autoFocus
                     />
                     <button
                       onClick={() => handleEditSave(key)}
-                      className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900 rounded"
+                      className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded"
                     >
                       <Save className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setEditingField(null)}
-                      className="p-1.5 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded"
+                      className="p-1.5 text-muted-foreground/50 hover:bg-white/5 rounded"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : isEmpty ? (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                  <p className="text-sm text-muted-foreground/40 italic">
                     尚未设置
                   </p>
                 ) : isArray && Array.isArray(val) ? (
@@ -220,14 +220,14 @@ export default function ProfileSection() {
                     {val.map((item: string, i: number) => (
                       <span
                         key={i}
-                        className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-sm"
+                        className="px-2 py-0.5 bg-primary/10 text-primary/80 rounded text-sm"
                       >
                         {item}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-800 dark:text-gray-200">
+                  <p className="text-sm text-foreground/80">
                     {typeof val === 'string' ? val : JSON.stringify(val)}
                   </p>
                 )}
@@ -240,10 +240,10 @@ export default function ProfileSection() {
       {/* 偏好设置 */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold dark:text-white">偏好设置</h3>
+          <h3 className="text-lg font-semibold text-foreground">偏好设置</h3>
           <button
             onClick={() => setShowPrefForm(!showPrefForm)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/80"
           >
             <Plus className="w-3.5 h-3.5" />
             添加
@@ -251,31 +251,31 @@ export default function ProfileSection() {
         </div>
 
         {showPrefForm && (
-          <div className="flex gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="flex gap-2 mb-4 p-3 bg-white/5 rounded-lg">
             <input
               type="text"
               value={newPrefKey}
               onChange={(e) => setNewPrefKey(e.target.value)}
               placeholder="键（如：编程语言偏好）"
-              className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="flex-1 px-3 py-1.5 text-sm border border-white/10 rounded bg-white/5 text-foreground"
             />
             <input
               type="text"
               value={newPrefValue}
               onChange={(e) => setNewPrefValue(e.target.value)}
               placeholder="值（如：TypeScript）"
-              className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="flex-1 px-3 py-1.5 text-sm border border-white/10 rounded bg-white/5 text-foreground"
             />
             <button
               onClick={handleAddPreference}
               disabled={!newPrefKey.trim()}
-              className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300"
+              className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-500 disabled:opacity-30"
             >
               保存
             </button>
             <button
               onClick={() => setShowPrefForm(false)}
-              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+              className="px-3 py-1.5 text-sm text-muted-foreground/50 hover:text-muted-foreground"
             >
               取消
             </button>
@@ -283,7 +283,7 @@ export default function ProfileSection() {
         )}
 
         {preferences.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+          <div className="text-center py-8 text-muted-foreground/40">
             暂无偏好设置，系统会在对话中自动学习你的偏好
           </div>
         ) : (
@@ -291,14 +291,14 @@ export default function ProfileSection() {
             {preferences.map((pref) => (
               <div
                 key={pref.key}
-                className="flex items-center justify-between px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg"
+                className="flex items-center justify-between px-4 py-3 glass-card rounded-lg"
               >
                 <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-muted-foreground">
                     {pref.key}
                   </span>
-                  <span className="mx-2 text-gray-300 dark:text-gray-600">=</span>
-                  <span className="text-sm text-gray-800 dark:text-gray-200">
+                  <span className="mx-2 text-muted-foreground/30">=</span>
+                  <span className="text-sm text-foreground/80">
                     {typeof pref.value === 'object'
                       ? JSON.stringify(pref.value)
                       : String(pref.value)}
@@ -306,7 +306,7 @@ export default function ProfileSection() {
                 </div>
                 <button
                   onClick={() => handleDeletePreference(pref.key)}
-                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  className="p-1 text-muted-foreground/40 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
