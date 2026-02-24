@@ -9,6 +9,9 @@ import {
   MessagesSquare,
   MessageCircle,
   Database,
+  Brain,
+  Lightbulb,
+  BookOpen,
   Mail,
   CalendarDays,
   Clock,
@@ -16,6 +19,12 @@ import {
 import StatsCard from '@/components/admin/StatsCard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+
+const MEMORY_TYPE_LABELS: Record<string, { label: string; icon: typeof Brain; color: string }> = {
+  fact: { label: '事实', icon: Brain, color: 'bg-blue-500' },
+  episodic: { label: '情景', icon: BookOpen, color: 'bg-purple-500' },
+  insight: { label: '洞察', icon: Lightbulb, color: 'bg-amber-500' },
+};
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('me2_access_token');
@@ -44,8 +53,6 @@ function formatDateTime(iso: string | null): string {
 
 interface SessionItem {
   id: string;
-  title: string;
-  created_at: string | null;
   last_active_at: string | null;
   message_count: number;
   is_active: boolean;
@@ -61,6 +68,7 @@ interface UserDetail {
   session_count: number;
   message_count: number;
   memory_count: number;
+  memory_by_type: Record<string, number>;
   recent_sessions: SessionItem[];
 }
 
@@ -113,6 +121,9 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
+
+  const memoryByType = data.memory_by_type ?? {};
+  const memoryTotal = data.memory_count || 1;
 
   return (
     <div className="space-y-6">
@@ -175,10 +186,43 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
           title="记忆"
           value={data.memory_count ?? 0}
           icon={Database}
+          trend={Object.entries(memoryByType).map(([type, count]) => ({
+            label: MEMORY_TYPE_LABELS[type]?.label ?? type,
+            value: count,
+          }))}
         />
       </div>
 
-      {/* 最近会话 */}
+      {/* 记忆分布 */}
+      {Object.keys(memoryByType).length > 0 && (
+        <div className="glass-card rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">记忆分布</h2>
+          <div className="space-y-3">
+            {Object.entries(memoryByType).map(([type, count]) => {
+              const meta = MEMORY_TYPE_LABELS[type] ?? { label: type, icon: Brain, color: 'bg-gray-500' };
+              const Icon = meta.icon;
+              const pct = memoryTotal > 0 ? Math.round((count / memoryTotal) * 100) : 0;
+              return (
+                <div key={type} className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm text-foreground w-16 shrink-0">{meta.label}</span>
+                  <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${meta.color} rounded-full transition-all`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground tabular-nums w-20 text-right">
+                    {count} ({pct}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 最近会话（隐藏标题保护隐私） */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/5">
           <h2 className="text-lg font-semibold text-foreground">最近会话</h2>
@@ -187,7 +231,6 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">标题</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">最后活跃</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-medium">消息数</th>
                 <th className="text-center px-4 py-3 text-muted-foreground font-medium">状态</th>
@@ -199,9 +242,6 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                   key={session.id}
                   className="border-b border-white/5 last:border-b-0 hover:bg-white/5 transition-colors"
                 >
-                  <td className="px-4 py-3 text-foreground">
-                    {session.title || '未命名'}
-                  </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDateTime(session.last_active_at)}
                   </td>
@@ -223,7 +263,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
               ))}
               {(!data.recent_sessions || data.recent_sessions.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
                     暂无会话
                   </td>
                 </tr>

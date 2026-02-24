@@ -224,14 +224,18 @@ class AdminService:
                 "message_count": msg_count,
             })
 
-        # 用户记忆统计
+        # 用户记忆统计（按类型）
         memory_count = 0
+        memory_by_type: dict[str, int] = {}
         try:
             result = await self.db.execute(
-                text("SELECT COUNT(*) FROM embeddings WHERE user_id = :uid"),
+                text("SELECT memory_type, COUNT(*) as cnt FROM embeddings WHERE user_id = :uid GROUP BY memory_type"),
                 {"uid": user_id},
             )
-            memory_count = result.scalar() or 0
+            for row in result.fetchall():
+                mtype = row[0] or "unknown"
+                memory_by_type[mtype] = row[1]
+                memory_count += row[1]
         except Exception:
             pass
 
@@ -246,6 +250,7 @@ class AdminService:
             "session_count": session_count,
             "message_count": message_count,
             "memory_count": memory_count,
+            "memory_by_type": memory_by_type,
             "recent_sessions": sessions_data,
         }
 
