@@ -53,8 +53,8 @@ export default function AdminDashboard() {
           value={users.total}
           icon={Users}
           trend={[
-            { label: 'Today', value: `+${users.today_new}` },
             { label: '7d active', value: users.active_7d },
+            { label: 'Admin', value: users.admin_count },
           ]}
         />
         <StatsCard
@@ -62,15 +62,14 @@ export default function AdminDashboard() {
           value={sessions.total}
           icon={MessagesSquare}
           trend={[
-            { label: 'Today', value: sessions.today },
-            { label: 'Active', value: sessions.active },
+            { label: '7d active', value: sessions.active_7d },
           ]}
         />
         <StatsCard
           title="Messages"
           value={messages.total}
           icon={MessageCircle}
-          trend={[{ label: 'Today', value: `+${messages.today}` }]}
+          trend={[{ label: '7d', value: messages.last_7d }]}
         />
         <StatsCard
           title="Memories"
