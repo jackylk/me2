@@ -46,14 +46,26 @@ async def lifespan(app: FastAPI):
     logger.info("📦 初始化数据库...")
     await init_db()
 
-    # 1.5 确保默认 admin 账号存在
+    # 1.5 确保 is_admin 列存在（create_all 不会给已有表加新列）
+    try:
+        from sqlalchemy import text
+        from app.db.database import engine
+        async with engine.begin() as conn:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE NOT NULL"
+            ))
+        logger.info("✅ is_admin 列已就绪")
+    except Exception as e:
+        logger.warning(f"⚠️  检查 is_admin 列失败: {e}")
+
+    # 1.6 确保默认 admin 账号存在
     try:
         from sqlalchemy import select
-        from app.db.database import async_session
+        from app.db.database import AsyncSessionLocal
         from app.db.models import User
         from app.services.auth_service import get_password_hash
 
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             result = await session.execute(select(User).where(User.username == "admin"))
             if not result.scalar_one_or_none():
                 admin_user = User(
