@@ -235,6 +235,70 @@ export default function AdminDashboard() {
         </section>
       )}
 
+      {/* LLM 用量 */}
+      {llmStats && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            LLM 用量
+            <span className="text-xs text-muted-foreground/50">(24小时)</span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-muted-foreground text-sm">调用次数</span>
+                <Zap className="w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {formatNumber(llmStats.total_calls)}
+              </div>
+              <div className="text-xs text-muted-foreground/50 mt-1">
+                今天: <span className="text-foreground/70">{formatNumber(llmStats.today_calls)}</span>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-muted-foreground text-sm">Token 用量</span>
+                <BarChart3 className="w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {formatNumber((llmStats.total_prompt_tokens || 0) + (llmStats.total_completion_tokens || 0))}
+              </div>
+              <div className="flex gap-3 mt-2">
+                <span className="text-xs text-muted-foreground/50">
+                  输入: <span className="text-foreground/70">{formatNumber(llmStats.total_prompt_tokens)}</span>
+                </span>
+                <span className="text-xs text-muted-foreground/50">
+                  输出: <span className="text-foreground/70">{formatNumber(llmStats.total_completion_tokens)}</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-muted-foreground text-sm">平均耗时</span>
+                <Clock className="w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {(llmStats.avg_duration_ms ?? 0).toFixed(0)}
+                <span className="text-sm font-normal text-muted-foreground ml-1">ms</span>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-muted-foreground text-sm">失败率</span>
+                <AlertTriangle className="w-4 h-4 text-muted-foreground/50" />
+              </div>
+              <div className={`text-2xl font-bold ${(llmStats.failure_rate ?? 0) > 0.05 ? 'text-red-400' : 'text-green-400'}`}>
+                {((llmStats.failure_rate ?? 0) * 100).toFixed(2)}%
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* API 性能 */}
       {apiStats && (
         <section className="space-y-3">
@@ -298,70 +362,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
-        </section>
-      )}
-
-      {/* LLM 用量 */}
-      {llmStats && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Brain className="w-4 h-4" />
-            LLM 用量
-            <span className="text-xs text-muted-foreground/50">(24小时)</span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-muted-foreground text-sm">调用次数</span>
-                <Zap className="w-4 h-4 text-muted-foreground/50" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">
-                {formatNumber(llmStats.total_calls)}
-              </div>
-              <div className="text-xs text-muted-foreground/50 mt-1">
-                今天: <span className="text-foreground/70">{formatNumber(llmStats.today_calls)}</span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-muted-foreground text-sm">Token 用量</span>
-                <BarChart3 className="w-4 h-4 text-muted-foreground/50" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">
-                {formatNumber((llmStats.total_prompt_tokens || 0) + (llmStats.total_completion_tokens || 0))}
-              </div>
-              <div className="flex gap-3 mt-2">
-                <span className="text-xs text-muted-foreground/50">
-                  输入: <span className="text-foreground/70">{formatNumber(llmStats.total_prompt_tokens)}</span>
-                </span>
-                <span className="text-xs text-muted-foreground/50">
-                  输出: <span className="text-foreground/70">{formatNumber(llmStats.total_completion_tokens)}</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-muted-foreground text-sm">平均耗时</span>
-                <Clock className="w-4 h-4 text-muted-foreground/50" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">
-                {(llmStats.avg_duration_ms ?? 0).toFixed(0)}
-                <span className="text-sm font-normal text-muted-foreground ml-1">ms</span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-muted-foreground text-sm">失败率</span>
-                <AlertTriangle className="w-4 h-4 text-muted-foreground/50" />
-              </div>
-              <div className={`text-2xl font-bold ${(llmStats.failure_rate ?? 0) > 0.05 ? 'text-red-400' : 'text-green-400'}`}>
-                {((llmStats.failure_rate ?? 0) * 100).toFixed(2)}%
-              </div>
-            </div>
-          </div>
         </section>
       )}
 
