@@ -61,7 +61,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
 
     # 生成 token
-    access_token = create_access_token({"sub": user.id})
+    access_token = create_access_token({"sub": user.id, "is_admin": user.is_admin})
     return TokenResponse(access_token=access_token)
 
 
@@ -82,5 +82,5 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     # 生成 token
-    access_token = create_access_token({"sub": user.id})
+    access_token = create_access_token({"sub": user.id, "is_admin": user.is_admin})
     return TokenResponse(access_token=access_token)

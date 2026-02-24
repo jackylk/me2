@@ -6,6 +6,8 @@ import {
   isAuthenticated,
   getUserId,
   getUsername,
+  getToken,
+  parseToken,
   login as authLogin,
   register as authRegister,
   logout as authLogout,
@@ -17,6 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userId: string | null;
   username: string | null;
+  isAdmin: boolean;
   loading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -43,6 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const uname = getUsername();
         setUserId(uid);
         setUsername(uname);
+
+        const token = getToken();
+        if (token) {
+          const payload = parseToken(token);
+          setIsAdmin(payload?.is_admin || false);
+        }
       }
 
       setLoading(false);
@@ -59,6 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthenticated(true);
       setUserId(uid);
       setUsername(uname);
+
+      const token = getToken();
+      if (token) {
+        const payload = parseToken(token);
+        setIsAdmin(payload?.is_admin || false);
+      }
 
       // Wait a tick for state to propagate before redirecting
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -77,6 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserId(uid);
       setUsername(uname);
 
+      const token = getToken();
+      if (token) {
+        const payload = parseToken(token);
+        setIsAdmin(payload?.is_admin || false);
+      }
+
       // Wait a tick for state to propagate before redirecting
       await new Promise(resolve => setTimeout(resolve, 50));
       router.replace('/');
@@ -90,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthenticated(false);
     setUserId(null);
     setUsername(null);
+    setIsAdmin(false);
     router.push('/login');
   };
 
@@ -99,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: authenticated,
         userId,
         username,
+        isAdmin,
         loading,
         login,
         register,
