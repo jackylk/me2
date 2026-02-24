@@ -184,7 +184,8 @@ async def metrics_middleware(request, call_next):
     return response
 
 # 注册路由
-from app.api.v1 import auth, chat, memories
+from app.api.v1 import admin, auth, chat, memories
+app.include_router(admin.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(memories.router, prefix="/api/v1")
